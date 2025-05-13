@@ -1,0 +1,71 @@
+#!/usr/bin/env sh
+
+# shellcheck shell=sh
+
+# SPDX-FileCopyrightText: © 2025 Sebastian Davids <sdavids@gmx.de>
+# SPDX-License-Identifier: Apache-2.0
+
+# hadolint needs to be in $PATH
+# https://github.com/hadolint/hadolint
+#   Mac:
+#     brew install hadolint
+#   Linux:
+#     sudo apt-get install hadolint
+
+# _shellcheck needs to be in $PATH
+# https://www.shellcheck.net
+#   Mac:
+#     brew install shellcheck
+#   Linux:
+#     sudo apt-get install shellcheck
+
+# shfmt needs to be in $PATH
+# https://github.com/mvdan/sh
+#   Mac:
+#     brew install shfmt
+#   Linux:
+#     sudo apt-get install shfmt
+
+# yamllint needs to be in $PATH
+# https://yamllint.readthedocs.io/en/stable/
+#   Mac:
+#     brew install yamllint
+#   Linux:
+#     sudo apt-get install yamllint
+
+set -eu
+
+if [ -n "$(git status --porcelain=v1)" ]; then
+  echo 'Git workspace is not clean: commit, stash, or reset your changes' >&2
+  exit 1
+fi
+
+git_root="$(git rev-parse --show-toplevel)"
+cd "${git_root}" || exit 1
+unset git_root
+
+if command -v shfmt >/dev/null 2>&1; then
+  set +e
+
+  diff="$(shfmt --diff --indent 2 --case-indent --binary-next-line --simplify .)"
+  if [ -n "${diff}" ]; then
+    printf '%s\n' "${diff}" >&2
+    exit 1
+  fi
+  unset diff
+
+  set -e
+
+  if command -v shellcheck >/dev/null 2>&1; then
+    { shfmt -l=0 . | xargs -0 shellcheck; } >&2
+  fi
+fi
+
+if command -v yamllint >/dev/null 2>&1; then
+  # https://yamllint.readthedocs.io/en/stable/quickstart.html#running-yamllint
+  yamllint --strict . >&2
+fi
+
+if command -v hadolint >/dev/null 2>&1; then
+  # https://github.com/hadolint/hadolint#cli
+fi

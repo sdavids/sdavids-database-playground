@@ -1,0 +1,8 @@
+# SPDX-FileCopyrightText: © 2025 Sebastian Davids <sdavids@gmx.de>
+# SPDX-License-Identifier: Apache-2.0
+
+version = 1
+
+SPDX-PackageName = "sdavids-database-playground"
+SPDX-PackageSupplier = "Sebastian Davids <sdavids@gmx.de>"
+SPDX-PackageDownloadLocation = "https://github.com/sdavids/sdavids-database-playground"

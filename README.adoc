@@ -1,0 +1,29 @@
+// SPDX-FileCopyrightText: © 2025 Sebastian Davids <sdavids@gmx.de>
+// SPDX-License-Identifier: Apache-2.0
+= sdavids-database-playground
+Sebastian Davids <sdavids@gmx.de>
+// Metadata:
+:description: Database Playground
+// Settings:
+:sectnums:
+:sectanchors:
+:sectlinks:
+:hide-uri-scheme:
+:source-highlighter: rouge
+:rouge-style: github
+
+ifdef::env-github[]
+:important-caption: :heavy_exclamation_mark:
+endif::[]
+
+Playground for databases and related frameworks and tools.
+
+[IMPORTANT]
+====
+After initializing this repository, you need to install the Git hooks via:
+
+[,console]
+----
+$ git config set core.hooksPath .githooks
+----
+====
