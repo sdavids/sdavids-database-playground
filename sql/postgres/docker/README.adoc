@@ -1,0 +1,192 @@
+// SPDX-FileCopyrightText: © 2025 Sebastian Davids <sdavids@gmx.de>
+// SPDX-License-Identifier: Apache-2.0
+= PostgreSQL: Docker
+Sebastian Davids <sdavids@gmx.de>
+// Metadata:
+:description: PostgreSQL: Docker
+// Settings:
+:sectanchors:
+:sectlinks:
+:toc: macro
+:toclevels: 3
+:toc-placement!:
+:hide-uri-scheme:
+:source-highlighter: rouge
+:rouge-style: github
+
+ifdef::env-github[]
+:warning-caption: :warning:
+endif::[]
+
+toc::[]
+
+[#usage]
+== Usage
+
+. Add credentials:
++
+[,console]
+----
+$ scripts/credentials_add.sh
+
+$ tree --noreport .docker/secrets
+.docker/secrets
+├── postgres-superuser
+├── postgres-superuser-pw
+├── sd-admin-pw
+├── sd-example-ow-pw
+├── sd-example-ro-pw
+└── sd-example-rw-pw
+----
++
+[WARNING]
+====
+Be careful not to add newlines to the files.
+
+This can easily happen if the editor you are using automatically inserts a newline at the end of the file.
+====
+
+. Build the image:
++
+[,console]
+----
+$ scripts/docker_build.sh
+----
+
+. Start the PostgreSQL server in detached mode:
++
+[,console]
+----
+$ scripts/docker_start.sh
+----
+
+. Get information on the container's health:
++
+[,console]
+----
+$ scripts/docker_health.sh
+----
+
+. Get information on the container's logs:
++
+[,console]
+----
+$ scripts/docker_logs.sh
+----
+
+. Shell into the container:
++
+[,console]
+----
+$ scripts/docker_sh.sh
+----
+
+. Connect via https://www.postgresql.org/docs/current/app-psql.html#id-1.9.4.21.8[psql].
++
+As superuser:
++
+[,console]
+----
+$ scripts/docker_psql.sh
+...
+
+sd_example=# \du
+...
+   Role name   |                         Attributes
+---------------+------------------------------------------------------------
+ admin         | Superuser, Create role, Create DB, Replication, Bypass RLS
+ sd_admin      |
+ sd_example_ow |
+ sd_example_ro |
+ sd_example_rw |
+sd_example=# \l sd_example
+...
+    Name    |  Owner   |  ...  |     Access privileges
+------------+----------+- ... -+---------------------------
+ sd_example | sd_admin |  ...  | sd_admin=CTc/sd_admin    +
+            |          |  ...  | sd_example_ow=Tc/sd_admin+
+            |          |  ...  | sd_example_rw=Tc/sd_admin+
+            |          |  ...  | sd_example_ro=c/sd_admin
+(1 row)
+sd_example=# \dn+ example
+...
+  Name   |     Owner     |       Access privileges        | Description
+---------+---------------+--------------------------------+-------------
+ example | sd_example_ow | sd_example_ow=UC/sd_example_ow+|
+         |               | sd_admin=UC/sd_example_ow     +|
+         |               | sd_example_rw=U/sd_example_ow +|
+         |               | sd_example_ro=U/sd_example_ow  |
+(1 row)
+----
++
+As one of the users created by the link:initdb/init.psql[init script]:
++
+[,console]
+----
+$ scripts/docker_psql.sh -u sd_admin
+$ scripts/docker_psql.sh -u sd_example_ow
+$ scripts/docker_psql.sh -u sd_example_rw
+$ scripts/docker_psql.sh -u sd_example_ro
+----
++
+Alternatively, use a database client of your choice and connect to `localhost:5432`
+
+. Dump the contents of the database:
++
+[,console]
+----
+$ scripts/docker_pg_dump.sh
+----
++
+⇒ `.docker/dumps/`
+
+. Stop the container:
++
+[,console]
+----
+$ scripts/docker_stop.sh
+----
+
+. Remove the container and its volumes:
++
+[,console]
+----
+$ scripts/docker_remove.sh
+----
+
+== Notes
+
+=== Databases
+
+This example link:initdb/init.psql[creates] the following databases:
+
+postgres:: the default database
+sd_example:: the database used in this example
+
+=== Schemas
+
+This example link:initdb/init.psql[creates] the following schema:
+
+example:: the schema in the `sd_example` database used in this example
+
+=== Users
+
+This example link:initdb/init.psql[creates]  the following users:
+
+"superuser name":: the random name of the superuser is created by the link:scripts/credentials_add.sh[credentials_add] script (`.docker/secrets/postgres-superuser`)
+sd_admin:: the admin for the `sd_example` database
+sd_example_ow:: the owner of the `example` schema
+sd_example_rw:: a read/write user for the `example` schema
+sd_example_ro:: a read-only user for the `example` schema
+
+Their random passwords will be created by the link:scripts/credentials_add.sh[credentials_add] script and stored in the following files in the `.docker/secrets` directory:
+
+postgres-superuser-pw::  for the superuser
+sd-admin-pw:: for `sd_admin`
+sd-example-ow-pw:: for `sd_example_ow`
+sd-example-rw-pw:: for `sd_example_rw`
+sd-example-ro-pw:: for `sd_example_ro`
+
+=== Docker
+
+The link:scripts/docker_start.sh[docker_start] script will mount the `.docker/secrets` directory into the container.

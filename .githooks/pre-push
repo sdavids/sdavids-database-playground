@@ -68,4 +68,5 @@ fi
 
 if command -v hadolint >/dev/null 2>&1; then
   # https://github.com/hadolint/hadolint#cli
+  hadolint sql/postgres/docker/Dockerfile >&2
 fi
