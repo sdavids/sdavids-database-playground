@@ -33,3 +33,4 @@ $ git config set core.hooksPath .githooks
 === PostgreSQL
 
 * link:sql/postgres/docker/README.adoc[Docker]
+* link:sql/postgres/docker-compose/README.adoc[Docker Compose]

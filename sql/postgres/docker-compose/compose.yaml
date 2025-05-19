@@ -1,0 +1,76 @@
+---
+# SPDX-FileCopyrightText: © 2025 Sebastian Davids <sdavids@gmx.de>
+# SPDX-License-Identifier: Apache-2.0
+
+# https://github.com/compose-spec/compose-spec/blob/main/spec.md
+# https://docs.docker.com/reference/compose-file/
+
+name: sdavids_database_playground_postgres
+
+x-postgres: &postgres
+  image: de.sdavids/sdavids-database-playground-postgres
+  build:
+    context: ./postgres
+  volumes:
+    - postgres_data:/var/lib/postgresql/data
+  networks:
+    - db
+  security_opt:
+    - no-new-privileges=true
+  cap_drop:
+    - ALL
+  user: postgres
+  environment:
+    POSTGRES_USER_FILE: /run/secrets/postgres-superuser
+    POSTGRES_PASSWORD_FILE: /run/secrets/postgres-superuser-pw
+    POSTGRES_DB: postgres
+
+services:
+  postgres:
+    <<: *postgres
+    profiles: [default]
+    container_name: sdavids-database-playground-postgres
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    secrets:
+      - postgres-superuser
+      - postgres-superuser-pw
+    restart: unless-stopped
+    ports:
+      - 5432:5432
+
+  postgres_init:
+    <<: *postgres
+    profiles: [init]
+    container_name: sdavids-database-playground-postgres-init
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ${LOCAL_WORKSPACE_FOLDER:-.}/initdb:/docker-entrypoint-initdb.d:ro
+    secrets:
+      - postgres-superuser
+      - postgres-superuser-pw
+      - sd-admin-pw
+      - sd-example-ow-pw
+      - sd-example-rw-pw
+      - sd-example-ro-pw
+    restart: no # yamllint disable-line rule:truthy
+
+volumes:
+  postgres_data: {}
+
+networks:
+  db: {}
+
+secrets:
+  postgres-superuser:
+    file: .docker/secrets/postgres-superuser
+  postgres-superuser-pw:
+    file: .docker/secrets/postgres-superuser-pw
+  sd-admin-pw:
+    file: .docker/secrets/sd-admin-pw
+  sd-example-ow-pw:
+    file: .docker/secrets/sd-example-ow-pw
+  sd-example-rw-pw:
+    file: .docker/secrets/sd-example-rw-pw
+  sd-example-ro-pw:
+    file: .docker/secrets/sd-example-ro-pw

@@ -24,3 +24,6 @@ max_line_length = 80
 
 [*.toml]
 max_line_length = 80
+
+[*.hcl]
+max_line_length = off
