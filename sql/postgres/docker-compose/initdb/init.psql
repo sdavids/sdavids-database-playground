@@ -1,0 +1,47 @@
+-- SPDX-FileCopyrightText: © 2025 Sebastian Davids <sdavids@gmx.de>
+-- SPDX-License-Identifier: Apache-2.0
+
+-- 4 users:
+--   sd_admin: database admin
+--   sd_example_ow: schema owner (can execute DDL statements)
+--   sd_example_rw: read-write user for schema (cannot execute DDL statements)
+--   sd_example_ro: read-only user for schema
+
+-- create admin user
+CREATE USER sd_admin WITH LOGIN PASSWORD :'ad_pw';
+
+-- create system users for database sd_example
+CREATE USER sd_example_ow WITH LOGIN PASSWORD :'ow_pw';
+CREATE USER sd_example_rw WITH LOGIN PASSWORD :'rw_pw';
+CREATE USER sd_example_ro WITH LOGIN PASSWORD :'ro_pw';
+
+-- create the database
+CREATE DATABASE sd_example WITH OWNER sd_admin
+  TEMPLATE template0
+  ENCODING  utf8;
+
+-- set permissions for database sd_example
+REVOKE ALL ON DATABASE sd_example FROM PUBLIC;
+GRANT ALL ON DATABASE sd_example TO sd_admin;
+GRANT CONNECT, TEMPORARY ON DATABASE sd_example TO sd_example_ow;
+GRANT CONNECT, TEMPORARY ON DATABASE sd_example TO sd_example_rw;
+GRANT CONNECT ON DATABASE sd_example TO sd_example_ro;
+
+-- connect to the database
+\c sd_example
+
+-- create the schema
+CREATE SCHEMA example AUTHORIZATION sd_example_ow;
+
+-- set permissions for schema sd_example
+REVOKE ALL ON SCHEMA example FROM PUBLIC;
+GRANT ALL ON SCHEMA example TO sd_admin;
+GRANT ALL ON ALL TABLES IN SCHEMA example TO sd_admin;
+GRANT ALL ON SCHEMA example TO sd_example_ow;
+GRANT USAGE ON SCHEMA example TO sd_example_rw;
+GRANT USAGE ON SCHEMA example TO sd_example_ro;
+
+-- https://www.postgresql.org/docs/current/ddl-schemas.html#DDL-SCHEMAS-PATH
+ALTER ROLE sd_example_ow IN DATABASE sd_example SET search_path = 'example';
+ALTER ROLE sd_example_rw IN DATABASE sd_example SET search_path = 'example';
+ALTER ROLE sd_example_ro IN DATABASE sd_example SET search_path = 'example';
