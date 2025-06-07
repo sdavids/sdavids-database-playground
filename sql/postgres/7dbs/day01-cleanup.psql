@@ -1,0 +1,17 @@
+-- Seven Databases in Seven Weeks, 1st ed., chapter 2, Day 1
+
+\c book
+
+SET search_path TO book;
+
+DROP TABLE IF EXISTS events CASCADE;
+
+DROP TABLE IF EXISTS venues CASCADE;
+
+DROP TABLE IF EXISTS cities CASCADE;
+
+DROP TABLE IF EXISTS countries CASCADE;
+
+\c postgres
+
+DROP DATABASE IF EXISTS book WITH (FORCE);

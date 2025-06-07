@@ -1,0 +1,168 @@
+-- Seven Databases in Seven Weeks, 1st ed., chapter 2, Day 1
+
+CREATE DATABASE book;
+
+\c book
+
+CREATE EXTENSION cube;
+CREATE EXTENSION dict_xsyn;
+CREATE EXTENSION fuzzystrmatch;
+CREATE EXTENSION pg_trgm;
+CREATE EXTENSION tablefunc;
+
+CREATE SCHEMA book;
+
+SET search_path TO book;
+
+CREATE TABLE countries
+(
+  country_code char(2) NOT NULL PRIMARY KEY,
+  country_name text    NOT NULL UNIQUE
+);
+
+INSERT INTO countries (country_code, country_name)
+VALUES ('us', 'United States of America'),
+       ('mx', 'Mexico'),
+       ('au', 'Australia'),
+       ('gb', 'United Kingdom'),
+       ('de', 'Germany'),
+       ('ll', 'Loompaland');
+
+-- INSERT INTO countries (country_code, country_name) VALUES ('uk', 'United Kingdom');
+
+SELECT *
+  FROM countries;
+
+DELETE
+  FROM countries
+ WHERE country_code = 'll';
+
+CREATE TABLE cities
+(
+  postal_code  varchar(9)                   NOT NULL CHECK (postal_code <> ''),
+  country_code char(2) REFERENCES countries NOT NULL,
+  name         text                         NOT NULL,
+  PRIMARY KEY (country_code, postal_code)
+);
+
+-- INSERT INTO cities (name, postal_code, country_code) VALUES ('Toronto', 'M4C1B5', 'ca');
+
+INSERT INTO cities (name, postal_code, country_code)
+VALUES ('Flensburg', '12345', 'de');
+
+SELECT *
+  FROM cities;
+
+UPDATE cities
+   SET postal_code = '24941'
+ WHERE name = 'Flensburg';
+
+SELECT cities.*,
+       country_name
+  FROM cities
+  JOIN countries ON cities.country_code = countries.country_code;
+
+CREATE TABLE venues
+(
+  venue_id       integer GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+  name           varchar(255) NOT NULL,
+  postal_code    varchar(9)   NOT NULL,
+  type           char(7)      NOT NULL CHECK ( type IN ('public', 'private') ) DEFAULT 'public',
+  country_code   char(2)      NOT NULL,
+  street_address text,
+  FOREIGN KEY (country_code, postal_code) REFERENCES cities (country_code, postal_code) MATCH FULL
+);
+
+INSERT INTO venues (name, postal_code, country_code, street_address)
+VALUES ('Roxy', '24941', 'de', 'Mergenthalerstraße 6');
+
+SELECT *
+  FROM venues;
+
+SELECT venue_id,
+       v.name AS venue,
+       c.name AS city
+  FROM venues v
+  JOIN cities c ON v.postal_code = c.postal_code AND v.country_code = c.country_code;
+
+   INSERT INTO venues (name, postal_code, country_code)
+   VALUES ('Rock Cafe', '24941', 'de')
+RETURNING venue_id;
+
+CREATE TABLE events
+(
+  starts   timestamp NOT NULL,
+  ends     timestamp NOT NULL,
+  event_id integer GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+  venue_id integer REFERENCES venues,
+  title    text      NOT NULL CHECK (title <> '')
+);
+
+INSERT INTO events (title, starts, ends, venue_id)
+VALUES ('Depeche Mode Party', '2025-03-23 21:00:00', '2025-03-24 03:00:00', 1);
+
+INSERT INTO events (title, starts, ends)
+VALUES ('April Fools Day', '2025-04-01 00:00:00', '2025-03-24 23:59:59');
+
+INSERT INTO events (title, starts, ends)
+VALUES ('Halloween', '2025-10-31 00:00:00', '2025-10-31 23:59:59');
+
+SELECT title,
+       name
+  FROM events e
+  JOIN book.venues v ON e.venue_id = v.venue_id;
+
+SELECT title,
+       name
+  FROM events e
+  LEFT JOIN book.venues v ON e.venue_id = v.venue_id;
+
+SELECT title,
+       name
+  FROM events e
+  RIGHT JOIN book.venues v ON e.venue_id = v.venue_id;
+
+SELECT title,
+       name
+  FROM events e
+  FULL JOIN book.venues v ON e.venue_id = v.venue_id;
+
+-- postgres does not use indexes for small tables so force using them
+SET enable_seqscan = OFF;
+
+EXPLAIN
+SELECT *
+  FROM events
+ WHERE title = 'Depeche Mode Party';
+
+EXPLAIN
+SELECT *
+  FROM events
+ WHERE starts >= '2025-04-01';
+
+CREATE INDEX events_title ON events USING hash (title);
+
+CREATE INDEX events_starts ON events USING btree (starts);
+
+EXPLAIN
+SELECT *
+  FROM events
+ WHERE title = 'Depeche Mode Party';
+
+EXPLAIN
+SELECT *
+  FROM events
+ WHERE starts >= '2025-04-01';
+
+SET enable_seqscan = ON;
+
+\di
+
+SELECT title,
+       country_name
+  FROM events e
+  JOIN venues v ON e.venue_id = v.venue_id
+  JOIN countries c ON v.country_code = c.country_code;
+
+ALTER TABLE venues
+  ADD COLUMN active boolean DEFAULT TRUE;

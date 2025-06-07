@@ -46,3 +46,11 @@ The superuser name and password:
 $ cat .docker/secrets/postgres-superuser
 $ cat .docker/secrets/postgres-superuser-pw
 ----
+
+== Day 1
+
+[,console]
+----
+$ ../docker/scripts/docker_psql.sh -d . -f day01.psql
+$ ../docker/scripts/docker_psql.sh -d . -f day01-cleanup.psql
+----
