@@ -34,3 +34,4 @@ $ git config set core.hooksPath .githooks
 
 * link:sql/postgres/docker/README.adoc[Docker]
 * link:sql/postgres/docker-compose/README.adoc[Docker Compose]
+* link:sql/postgres/7dbs/README.adoc[Seven Databases in Seven Weeks: Chapter 2]

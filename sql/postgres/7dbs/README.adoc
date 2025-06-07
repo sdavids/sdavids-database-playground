@@ -1,0 +1,49 @@
+// SPDX-FileCopyrightText: © 2025 Sebastian Davids <sdavids@gmx.de>
+// SPDX-License-Identifier: Apache-2.0
+= PostgreSQL: Seven Databases in Seven Weeks
+Sebastian Davids <sdavids@gmx.de>
+// Metadata:
+:description: PostgreSQL: Seven Databases in Seven Weeks
+// Settings:
+:sectanchors:
+:sectlinks:
+:idprefix:
+:toc: macro
+:toclevels: 3
+:toc-placement!:
+:hide-uri-scheme:
+:source-highlighter: rouge
+:rouge-style: github
+
+ifdef::env-github[]
+:note-caption: :information_source:
+:tip-caption: :bulb:
+endif::[]
+
+toc::[]
+
+Book:: https://7dbs.io[Seven Databases in Seven Weeks]
+
+== Prerequisites
+
+[NOTE]
+====
+For simplicity, we will be using the link:../docker/README.adoc#usage[Docker variant].
+====
+
+[,console]
+----
+$ ../docker/scripts/credentials_add.sh
+
+$ ../docker/scripts/docker_build.sh -d ../docker/Dockerfile
+
+$ ../docker/scripts/docker_start.sh -d . -i ../docker/initdb
+----
+
+The superuser name and password:
+
+[,console]
+----
+$ cat .docker/secrets/postgres-superuser
+$ cat .docker/secrets/postgres-superuser-pw
+----
