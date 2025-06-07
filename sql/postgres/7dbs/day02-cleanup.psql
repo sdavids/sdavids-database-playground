@@ -1,0 +1,17 @@
+-- Seven Databases in Seven Weeks, 1st ed., chapter 2, Day 1
+
+\c book
+
+SET search_path TO book;
+
+DROP TRIGGER IF EXISTS log_events ON events;
+
+DROP FUNCTION IF EXISTS log_event;
+
+DROP FUNCTION IF EXISTS add_event;
+
+DROP VIEW IF EXISTS holidays;
+
+DROP TABLE IF EXISTS logs CASCADE;
+
+DROP TABLE IF EXISTS account CASCADE;

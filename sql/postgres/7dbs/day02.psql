@@ -1,0 +1,374 @@
+-- Seven Databases in Seven Weeks, 1st ed., chapter 2, Day 2
+
+\c book
+
+SET search_path TO book;
+
+INSERT INTO cities (name, postal_code, country_code)
+VALUES ('Hamburg', '22767', 'de');
+
+INSERT INTO venues (name, postal_code, country_code, street_address, type)
+VALUES ('My Place', '22767', 'de', 'private');
+
+INSERT INTO events (title, starts, ends)
+VALUES ('Valentine''s Day', '2025-02-14 00:00:00', '2025-02-14 23:59:59');
+
+INSERT INTO events (title, starts, ends, venue_id)
+VALUES ('Roxy Revival Party', '2025-04-05 21:00:00', '2025-04-06 03:00:00', 1);
+
+INSERT INTO events (title, starts, ends, venue_id)
+VALUES ('Julklapp',
+        '2025-12-12 21:00:00',
+        '2025-12-13 02:00:00',
+        (SELECT venue_id FROM venues WHERE name = 'My Place'));
+
+SELECT COUNT(*)
+  FROM events
+ WHERE title LIKE '%Day%';
+
+SELECT MIN(starts),
+       MAX(ends)
+  FROM events e
+  JOIN venues v ON e.venue_id = v.venue_id
+ WHERE v.name = 'Roxy';
+
+SELECT COUNT(*)
+  FROM events
+ WHERE venue_id = 1;
+
+SELECT COUNT(*)
+  FROM events
+ WHERE venue_id = 2;
+
+SELECT COUNT(*)
+  FROM events
+ WHERE venue_id = 3;
+
+SELECT COUNT(*)
+  FROM events
+ WHERE venue_id IS NULL;
+
+-- does not show venues without an event
+SELECT venue_id,
+       COUNT(*)
+  FROM events
+ GROUP BY venue_id;
+
+-- does not show events without venues
+SELECT v.venue_id,
+       COUNT(e.event_id)
+  FROM venues v
+  LEFT JOIN events e ON v.venue_id = e.venue_id
+ GROUP BY 1;
+
+-- shows counts for events with and without venues
+SELECT v.venue_id,
+       COUNT(e.event_id)
+  FROM venues v
+  FULL JOIN events e ON v.venue_id = e.venue_id
+ GROUP BY 1;
+
+SELECT venue_id,
+       COUNT(*)
+  FROM events
+ GROUP BY venue_id
+HAVING COUNT(*) >= 2
+   AND venue_id IS NOT NULL;
+
+SELECT venue_id
+  FROM events
+ GROUP BY venue_id;
+
+SELECT DISTINCT venue_id
+  FROM events;
+
+-- SELECT title, venue_id, COUNT(*)
+-- FROM events
+-- GROUP BY venue_id;
+
+SELECT title,
+       venue_id,
+       COUNT(*) OVER (PARTITION BY venue_id)
+  FROM events;
+
+BEGIN
+  TRANSACTION;
+
+DELETE
+  FROM events;
+
+ROLLBACK;
+
+SELECT *
+  FROM events;
+
+CREATE TABLE account
+(
+  account_id integer GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+  total      numeric NOT NULL
+);
+
+INSERT INTO account (total)
+VALUES (10000);
+
+INSERT INTO account (total)
+VALUES (10000);
+
+BEGIN TRANSACTION;
+
+UPDATE account
+   SET total = total - 5000
+ WHERE account_id = 1;
+UPDATE account
+   SET total = total + 5000
+ WHERE account_id = 2;
+
+END;
+
+CREATE OR REPLACE FUNCTION add_event(title text, starts timestamp, ends timestamp, venue text, postal_code varchar(9),
+                                     country_code char(2))
+  RETURNS boolean AS
+$$
+DECLARE
+  did_insert boolean := FALSE;
+  found_count
+             integer;
+  the_venue_id
+             integer;
+BEGIN
+  SELECT venue_id
+    INTO the_venue_id
+    FROM venues v
+   WHERE v.postal_code = add_event.postal_code
+     AND v.country_code = add_event.country_code
+     AND v.name ILIKE venue
+   LIMIT 1;
+
+  IF
+    the_venue_id IS NULL THEN
+       INSERT INTO venues (NAME, postal_code, country_code)
+       VALUES (add_event.venue, add_event.postal_code, add_event.country_code)
+    RETURNING venue_id INTO the_venue_id;
+
+    did_insert
+      := TRUE;
+  END IF;
+
+  RAISE
+    NOTICE 'Venue found %', the_venue_id;
+
+  INSERT INTO events (title, starts, ends, venue_id)
+  VALUES (add_event.title, add_event.starts, add_event.ends, the_venue_id);
+
+  RETURN did_insert;
+END;
+$$
+  LANGUAGE plpgsql;
+
+SELECT add_event('Ghostship', '2025-06-28 21:00:00', '2025-06-29 05:00:00', 'MS Stubnitz', '22767', 'de');
+
+CREATE TABLE logs
+(
+  old_starts timestamp NOT NULL,
+  old_ends   timestamp NOT NULL,
+  logged_at  timestamp DEFAULT CURRENT_TIMESTAMP,
+  event_id   integer   NOT NULL,
+  old_title  text      NOT NULL
+);
+
+CREATE OR REPLACE FUNCTION log_event() RETURNS trigger AS
+$$
+DECLARE
+BEGIN
+  INSERT INTO logs (event_id, old_title, old_starts, old_ends)
+  VALUES (OLD.event_id, OLD.title, OLD.starts, OLD.ends);
+
+  RAISE
+    NOTICE 'Event changed %', OLD.event_id;
+
+  RETURN NEW;
+END;
+$$
+  LANGUAGE plpgsql;
+
+CREATE TRIGGER log_events
+  AFTER UPDATE
+  ON events
+  FOR EACH ROW
+EXECUTE PROCEDURE log_event();
+
+UPDATE events
+   SET ends='2025-06-29 06:00:00'
+ WHERE title = 'Ghostship';
+
+SELECT *
+  FROM logs;
+
+CREATE VIEW holidays AS
+SELECT event_id             AS holiday_id,
+       title                AS name,
+       CAST(starts AS date) AS date
+  FROM events
+ WHERE title LIKE '%Day%'
+   AND venue_id IS NULL;
+
+SELECT *
+  FROM holidays;
+
+INSERT INTO events (title, starts, ends)
+VALUES ('Mother''s Day', '2025-05-11 00:00:00', '2025-05-11 23:59:59');
+
+SET
+  lc_time TO 'en_US.utf8';
+
+SELECT name,
+       TO_CHAR(date, 'TMDay, DD TMMonth YYYY') AS date
+  FROM holidays;
+
+-- depends on the locale being installed on the system
+-- https://hub.docker.com/_/postgres/#:~:text=Locale%20Customization
+-- see sql/postgres/docker/Dockerfile
+SET
+  lc_time TO 'de_DE.utf8';
+
+SELECT name,
+       TO_CHAR(date, 'TMDay, DD TMMonth YYYY') AS date
+  FROM holidays;
+
+SET
+  lc_time TO '';
+
+ALTER TABLE events
+  ADD COLUMN colors text array;
+
+CREATE OR REPLACE VIEW holidays AS
+SELECT event_id             AS holiday_id,
+       title                AS name,
+       CAST(starts AS date) AS date,
+       colors
+  FROM events
+ WHERE title LIKE '%Day%'
+   AND venue_id IS NULL;
+
+EXPLAIN VERBOSE
+SELECT *
+  FROM holidays;
+
+UPDATE holidays
+   SET colors = '{"red", "white"}'
+ WHERE name = 'Valentine''s Day';
+
+CREATE RULE insert_holiday AS ON INSERT TO holidays DO INSTEAD
+  INSERT INTO events (title, starts, ends)
+  VALUES (NEW.name, NEW.date + '00:00:00'::time, NEW.date + '23:59:59'::time);
+
+INSERT INTO holidays (name, date)
+VALUES ('New Years Day', '2025-12-31');
+
+INSERT INTO holidays (name, date)
+VALUES ('New Years Day', '2026-12-31');
+
+SELECT EXTRACT(YEAR FROM starts)  AS year,
+       EXTRACT(MONTH FROM starts) AS month,
+       COUNT(*)
+  FROM events
+ GROUP BY year, month
+ ORDER BY year, month;
+
+CREATE TEMPORARY TABLE month_count
+(
+  month smallint
+);
+
+INSERT INTO month_count
+VALUES (1),
+       (2),
+       (3),
+       (4),
+       (5),
+       (6),
+       (7),
+       (8),
+       (9),
+       (10),
+       (11),
+       (12);
+
+SELECT year,
+       COALESCE(jan, 0) AS jan,
+       COALESCE(feb, 0) AS feb,
+       COALESCE(mar, 0) AS mar,
+       COALESCE(apr, 0) AS apr,
+       COALESCE(may, 0) AS may,
+       COALESCE(jun, 0) AS jun,
+       COALESCE(jul, 0) AS jul,
+       COALESCE(aug, 0) AS aug,
+       COALESCE(sep, 0) AS sep,
+       COALESCE(oct, 0) AS oct,
+       COALESCE(nov, 0) AS nov,
+       COALESCE(dez, 0) AS dez
+  FROM public.crosstab(
+      'SELECT EXTRACT(YEAR FROM starts) AS year, EXTRACT(MONTH FROM starts) AS month, COUNT(*) FROM events GROUP BY year, month ORDER BY year, month',
+      'SELECT * from month_count'
+       ) AS (year numeric,
+             jan bigint,
+             feb bigint,
+             mar bigint,
+             apr bigint,
+             may bigint,
+             jun bigint,
+             jul bigint,
+             aug bigint,
+             sep bigint,
+             oct bigint,
+             nov bigint,
+             dez bigint)
+ ORDER BY year;
+
+CREATE RULE delete_venue AS ON DELETE TO venues DO INSTEAD
+  UPDATE venues
+     SET active = FALSE
+   WHERE venue_id = OLD.venue_id;
+
+SELECT name,
+       active
+  FROM venues;
+
+DELETE
+  FROM venues
+ WHERE name = 'Rock Cafe';
+
+SELECT name,
+       active
+  FROM venues;
+
+SELECT year,
+       COALESCE(jan, 0) AS jan,
+       COALESCE(feb, 0) AS feb,
+       COALESCE(mar, 0) AS mar,
+       COALESCE(apr, 0) AS apr,
+       COALESCE(may, 0) AS may,
+       COALESCE(jun, 0) AS jun,
+       COALESCE(jul, 0) AS jul,
+       COALESCE(aug, 0) AS aug,
+       COALESCE(sep, 0) AS sep,
+       COALESCE(oct, 0) AS oct,
+       COALESCE(nov, 0) AS nov,
+       COALESCE(dez, 0) AS dez
+  FROM public.crosstab(
+      'SELECT EXTRACT(YEAR FROM starts) AS year, EXTRACT(MONTH FROM starts) AS month, COUNT(*) FROM events GROUP BY year, month ORDER BY year, month',
+      'SELECT * FROM generate_series(1, 12)'
+       ) AS (year numeric,
+             jan bigint,
+             feb bigint,
+             mar bigint,
+             apr bigint,
+             may bigint,
+             jun bigint,
+             jul bigint,
+             aug bigint,
+             sep bigint,
+             oct bigint,
+             nov bigint,
+             dez bigint)
+ ORDER BY year;

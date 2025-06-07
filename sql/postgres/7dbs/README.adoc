@@ -54,3 +54,13 @@ $ cat .docker/secrets/postgres-superuser-pw
 $ ../docker/scripts/docker_psql.sh -d . -f day01.psql
 $ ../docker/scripts/docker_psql.sh -d . -f day01-cleanup.psql
 ----
+
+== Day 2
+
+[,console]
+----
+$ ../docker/scripts/docker_psql.sh -d . -f day01.psql
+$ ../docker/scripts/docker_psql.sh -d . -f day02.psql
+$ ../docker/scripts/docker_psql.sh -d . -f day02-cleanup.psql
+$ ../docker/scripts/docker_psql.sh -d . -f day01-cleanup.psql
+----
