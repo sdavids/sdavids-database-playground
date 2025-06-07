@@ -1,0 +1,4 @@
+-- Seven Databases in Seven Weeks, 1st ed., chapter 2, Day 1 - Drop Database
+
+-- https://www.postgresql.org/docs/current/sql-dropdatabase.html
+DROP DATABASE IF EXISTS book WITH (FORCE);

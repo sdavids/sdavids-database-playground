@@ -1,0 +1,16 @@
+-- Seven Databases in Seven Weeks, 1st ed., chapter 2, Day 1 - Cleanup
+
+SET search_path TO book;
+
+-- https://www.postgresql.org/docs/current/sql-dropindex.html
+DROP INDEX IF EXISTS event_title_ix;
+DROP INDEX IF EXISTS event_starts_ix;
+
+-- https://www.postgresql.org/docs/current/sql-droptable.html
+DROP TABLE IF EXISTS event CASCADE;
+DROP TABLE IF EXISTS venue CASCADE;
+DROP TABLE IF EXISTS city CASCADE;
+DROP TABLE IF EXISTS country CASCADE;
+
+-- https://www.postgresql.org/docs/current/sql-dropschema.html
+DROP SCHEMA IF EXISTS book;

@@ -1,0 +1,192 @@
+-- Seven Databases in Seven Weeks, 1st ed., chapter 2, Day 1
+
+SET search_path TO book;
+
+-- https://www.postgresql.org/docs/current/sql-createtable.html
+-- https://www.postgresql.org/docs/current/ddl-constraints.html#DDL-CONSTRAINTS-PRIMARY-KEYS
+-- https://www.postgresql.org/docs/current/ddl-constraints.html#DDL-CONSTRAINTS-NOT-NULL
+-- https://www.postgresql.org/docs/current/ddl-constraints.html#DDL-CONSTRAINTS-UNIQUE-CONSTRAINTS
+CREATE TABLE country
+(
+  code char(2)
+    CONSTRAINT country_pk PRIMARY KEY,
+  name text NOT NULL
+    CONSTRAINT country_name_uq UNIQUE
+);
+
+-- https://www.postgresql.org/docs/current/sql-insert.html
+INSERT INTO country (code, name)
+VALUES ('us', 'United States of America'),
+       ('mx', 'Mexico'),
+       ('au', 'Australia'),
+       ('gb', 'United Kingdom'),
+       ('de', 'Germany'),
+       ('ll', 'Loompaland');
+
+-- INSERT INTO countries (country_code, country_name) VALUES ('uk', 'United Kingdom');
+
+-- https://www.postgresql.org/docs/current/sql-select.html
+SELECT *
+  FROM country;
+
+-- https://www.postgresql.org/docs/current/sql-delete.html
+DELETE
+  FROM country
+ WHERE code = 'll';
+
+-- https://www.postgresql.org/docs/current/ddl-constraints.html#DDL-CONSTRAINTS-CHECK-CONSTRAINTS
+-- https://www.postgresql.org/docs/current/ddl-constraints.html#DDL-CONSTRAINTS-FK
+CREATE TABLE city
+(
+  postal_code  varchar(9) NOT NULL
+    CONSTRAINT city_postal_code_ck CHECK (postal_code <> ''),
+  country_code char(2)    NOT NULL
+    CONSTRAINT city_country_fk REFERENCES country,
+  name         text       NOT NULL,
+  CONSTRAINT city_pk PRIMARY KEY (country_code, postal_code)
+);
+
+-- INSERT INTO city (name, postal_code, country_code) VALUES ('Toronto', 'M4C1B5', 'ca');
+
+INSERT INTO city (name, postal_code, country_code)
+VALUES ('Flensburg', '12345', 'de');
+
+SELECT *
+  FROM city;
+
+-- https://www.postgresql.org/docs/current/sql-update.html
+UPDATE city
+   SET postal_code = '24941'
+ WHERE name = 'Flensburg';
+
+-- https://www.postgresql.org/docs/current/tutorial-join.html
+-- https://www.postgresql.org/docs/current/sql-select.html#SQL-FROM
+SELECT city.*,
+       country.name
+  FROM city
+  JOIN country ON city.country_code = country.code;
+
+-- https://www.postgresql.org/docs/current/ddl-identity-columns.html
+-- https://www.postgresql.org/docs/current/functions-subquery.html#FUNCTIONS-SUBQUERY-IN
+-- https://www.postgresql.org/docs/current/sql-createtable.html#SQL-CREATETABLE-PARMS-DEFAULT
+-- https://www.postgresql.org/docs/current/sql-createtable.html#SQL-CREATETABLE-PARMS-REFERENCES
+CREATE TABLE venue
+(
+  venue_id       integer GENERATED ALWAYS AS IDENTITY
+    CONSTRAINT venue_pk PRIMARY KEY,
+  name           varchar(255) NOT NULL,
+  postal_code    varchar(9)   NOT NULL,
+  type           char(7)      NOT NULL
+    CONSTRAINT venue_type_ck CHECK ( type IN ('public', 'private') ) DEFAULT 'public',
+  country_code   char(2)      NOT NULL,
+  street_address text,
+  CONSTRAINT venue_city_fk FOREIGN KEY (country_code, postal_code) REFERENCES city (country_code, postal_code) MATCH FULL
+);
+
+INSERT INTO venue (name, postal_code, country_code, street_address)
+VALUES ('Roxy', '24941', 'de', 'Mergenthalerstraße 6');
+
+SELECT *
+  FROM venue;
+
+SELECT v.venue_id,
+       v.name AS venue,
+       c.name AS city
+  FROM venue v
+  JOIN city c ON v.postal_code = c.postal_code AND v.country_code = c.country_code;
+
+-- https://www.postgresql.org/docs/current/sql-insert.html#id-1.9.3.152.7
+   INSERT INTO venue (name, postal_code, country_code)
+   VALUES ('Rock Cafe', '24941', 'de')
+RETURNING venue_id;
+
+CREATE TABLE event
+(
+  starts   timestamp NOT NULL,
+  ends     timestamp NOT NULL,
+  event_id integer GENERATED ALWAYS AS IDENTITY
+    CONSTRAINT event_pk PRIMARY KEY,
+  venue_id integer
+    CONSTRAINT event_venue_fk REFERENCES venue,
+  title    text      NOT NULL
+    CONSTRAINT title_ck CHECK (title <> '')
+);
+
+INSERT INTO event (title, starts, ends, venue_id)
+VALUES ('Depeche Mode Party', '2025-03-23 21:00:00', '2025-03-24 03:00:00', 1);
+
+INSERT INTO event (title, starts, ends)
+VALUES ('April Fools Day', '2025-04-01 00:00:00', '2025-03-24 23:59:59');
+
+INSERT INTO event (title, starts, ends)
+VALUES ('Halloween', '2025-10-31 00:00:00', '2025-10-31 23:59:59');
+
+SELECT e.title,
+       v.name
+  FROM event e
+  JOIN venue v ON e.venue_id = v.venue_id;
+
+-- https://www.postgresql.org/docs/current/tutorial-join.html
+-- https://www.postgresql.org/docs/current/sql-select.html#SQL-FROM
+SELECT e.title,
+       v.name
+  FROM event e
+  LEFT JOIN venue v ON e.venue_id = v.venue_id;
+
+SELECT e.title,
+       v.name
+  FROM event e
+  RIGHT JOIN venue v ON e.venue_id = v.venue_id;
+
+SELECT e.title,
+       v.name
+  FROM event e
+  FULL JOIN venue v ON e.venue_id = v.venue_id;
+
+-- postgres does not use indexes for small tables so force using them
+-- https://www.postgresql.org/docs/current/runtime-config-query.html#GUC-ENABLE-SEQSCAN
+SET enable_seqscan = OFF;
+
+-- https://www.postgresql.org/docs/current/using-explain.html
+-- https://www.postgresql.org/docs/current/sql-explain.html
+EXPLAIN
+SELECT *
+  FROM event
+ WHERE title = 'Depeche Mode Party';
+
+EXPLAIN
+SELECT *
+  FROM event
+ WHERE starts >= '2025-04-01';
+
+-- https://www.postgresql.org/docs/current/sql-createindex.html
+-- https://www.postgresql.org/docs/current/hash-index.html
+CREATE INDEX event_title_ix ON event USING hash (title);
+
+-- https://www.postgresql.org/docs/current/btree.html
+CREATE INDEX event_starts_ix ON event USING btree (starts);
+
+EXPLAIN
+SELECT *
+  FROM event
+ WHERE title = 'Depeche Mode Party';
+
+EXPLAIN
+SELECT *
+  FROM event
+ WHERE starts >= '2025-04-01';
+
+SET enable_seqscan = ON;
+
+-- https://www.postgresql.org/docs/current/app-psql.html#APP-PSQL-META-COMMAND-DE
+\di
+
+SELECT e.title,
+       c.name
+  FROM event e
+  JOIN venue v ON e.venue_id = v.venue_id
+  JOIN country c ON v.country_code = c.code;
+
+-- https://www.postgresql.org/docs/current/sql-altertable.html
+ALTER TABLE venue
+  ADD COLUMN active boolean DEFAULT TRUE;

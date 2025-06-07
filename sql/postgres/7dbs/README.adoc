@@ -47,3 +47,131 @@ The superuser name and password:
 $ cat .docker/secrets/postgres-superuser
 $ cat .docker/secrets/postgres-superuser-pw
 ----
+
+== Day 1
+
+[,console]
+----
+$ ../docker/scripts/docker_psql.sh -d . -f day01-db-create.psql
+$ ../docker/scripts/docker_psql.sh -d . -n book -f day01-init.psql
+$ ../docker/scripts/docker_psql.sh -d . -n book -f day01.psql
+$ ../docker/scripts/docker_psql.sh -d . -n book -f day01-cleanup.psql
+$ ../docker/scripts/docker_psql.sh -d . -f day01-db-drop.psql
+----
+
+[NOTE]
+====
+* Ensure that you set the correct `search_path`:
++
+[,sql]
+----
+SET search_path TO book;
+----
++
+** https://www.postgresql.org/docs/current/runtime-config-client.html#GUC-SEARCH-PATH[search_path]
+
+* Use explicit names for constraints:
++
+[,sql]
+----
+CREATE TABLE example
+(
+  example_id integer PRIMARY KEY,
+  name       text    NOT NULL CHECK (name <> ''),
+  other_id   integer NOT NULL REFERENCES other
+);
+----
++
+⇓
++
+[,sql]
+----
+CREATE TABLE example
+(
+  example_id integer
+    CONSTRAINT example_pk PRIMARY KEY,
+  name       text    NOT NULL
+    CONSTRAINT name_ck CHECK (name <> ''),
+  other_id   integer NOT NULL
+    CONSTRAINT example_other_fk REFERENCES other
+);
+----
+
+* Be explicit about where the column comes from instead of relying on disjunct column names:
++
+[,sql]
+----
+SELECT title,
+       name
+  FROM event e
+  JOIN venue v ON e.venue_id = v.venue_id;
+----
++
+⇓
++
+[,sql]
+----
+SELECT e.title,
+       v.name
+  FROM event e
+  JOIN venue v ON e.venue_id = v.venue_id;
+----
+
+* Be explicit about the target columns in an `INSERT` instead of relying on the column's declaration order:
++
+[,sql]
+----
+INSERT INTO country VALUES ('de', 'Germany');
+----
++
+⇓
++
+[,sql]
+----
+INSERT INTO country (code, name) VALUES ('de', 'Germany');
+----
+
+* Be explicit where you want an extension to be installed:
++
+[,sql]
+----
+CREATE EXTENSION cube;
+----
++
+⇓
++
+[,sql]
+----
+CREATE EXTENSION cube SCHEMA extension;
+----
+
+* One does https://www.postgresql.org/docs/current/ddl-constraints.html#DDL-CONSTRAINTS-PRIMARY-KEYS[not need] to explicitly mark a primary key `NOT NULL`.
+
+* Use `integer GENERATED ALWAYS AS IDENTITY PRIMARY KEY` instead of `serial PRIMARY KEY`.
++
+** https://www.postgresql.org/docs/current/datatype-numeric.html#DATATYPE-SERIAL[Serial Types]
+** https://www.postgresql.org/docs/current/ddl-identity-columns.html[Identity Columns]
+
+* Indexes may not be used for small tables;
++
+`SET enable_seqscan = OFF;` will force their usage.
++
+** https://www.postgresql.org/docs/current/runtime-config-query.html#GUC-ENABLE-SEQSCAN[enable_seqscan]
+** https://www.pgmustard.com/blog/why-isnt-postgres-using-my-index[Why isn't postgres using my index?]
+** https://stackoverflow.com/questions/34537096/postgres-not-using-index-when-index-scan-is-much-better-option/34584053#34584053[Postgres not using index when index scan is a much better option]
+====
+
+[TIP]
+====
+* Use singular table names: `city`/`venue` instead of `cities`/`venues`.
+
+* Use the following suffixes:
++
+Table:: no suffix
+Primary Key:: `_pk`
+Unique Key:: `_uq`
+Foreign Key:: `_fk`
+Check Constraint:: `_ck`
+Index:: `_ix`
+Trigger:: `_tr`
+====
