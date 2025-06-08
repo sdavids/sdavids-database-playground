@@ -1,0 +1,3 @@
+-- Seven Databases in Seven Weeks, 1st ed., chapter 2, Day 3 - Drop Database
+
+DROP DATABASE IF EXISTS movie WITH (FORCE);

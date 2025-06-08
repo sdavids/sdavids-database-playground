@@ -240,3 +240,29 @@ SET search_path TO book,extension;
 ** https://www.postgresql.org/docs/current/plpgsql-trigger.html#PLPGSQL-DML-TRIGGER[Triggers on Data Changes]
 ** https://www.postgresql.org/docs/current/rules-update.html#RULES-UPDATE[Rules on INSERT, UPDATE, and DELETE]
 ====
+
+== Day 3
+
+[,console]
+----
+$ ../docker/scripts/docker_psql.sh -d . -f day03-db-create.psql
+$ ../docker/scripts/docker_psql.sh -d . -n movie -f day03-extensions-create.psql
+$ ../docker/scripts/docker_psql.sh -d . -n movie -f day03-init.psql
+$ ../docker/scripts/docker_psql.sh -d . -n movie -f day03-data.psql
+$ ../docker/scripts/docker_psql.sh -d . -n movie -f day03.psql
+$ ../docker/scripts/docker_psql.sh -d . -n movie -f day03-cleanup.psql
+$ ../docker/scripts/docker_psql.sh -d . -n movie -f day03-extensions-drop.psql
+$ ../docker/scripts/docker_psql.sh -d . -f day03-db-drop.psql
+----
+
+[NOTE]
+====
+* Show text search configurations: `\dF`
+* Show text search dictionaries: `\dFd`
+* Display the https://www.postgresql.org/docs/current/textsearch-dictionaries.html#TEXTSEARCH-STOPWORDS[stop words] for the English language:
++
+[,console]
+----
+$ docker exec sdavids-database-playground-postgres cat /usr/share/postgresql/17/tsearch_data/english.stop
+----
+====

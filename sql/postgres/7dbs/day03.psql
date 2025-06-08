@@ -1,0 +1,308 @@
+-- Seven Databases in Seven Weeks, 1st ed., chapter 2, Day 3
+
+SET search_path TO movie,extension;
+
+-- https://www.postgresql.org/docs/current/functions-matching.html#FUNCTIONS-LIKE
+SELECT title
+  FROM movie
+ WHERE title LIKE 'Stardust%';
+
+SELECT title
+  FROM movie
+ WHERE title ILIKE 'stardust%';
+
+SELECT title
+  FROM movie
+ WHERE title ILIKE 'stardust_%';
+
+SELECT title
+  FROM movie
+ WHERE title ILIKE 'b_d%'
+ LIMIT 5;
+
+-- movies starting with The
+-- https://www.postgresql.org/docs/current/functions-matching.html#FUNCTIONS-POSIX-REGEXP
+SELECT COUNT(*)
+  FROM movie
+ WHERE title ~ '^The.*';
+
+-- movies starting with the (case-insensitive)
+SELECT COUNT(*)
+  FROM movie
+ WHERE title ~* '^the.*';
+
+-- movies not starting with the
+SELECT COUNT(*)
+  FROM movie
+ WHERE title !~* '^the.*';
+
+EXPLAIN
+SELECT title
+  FROM movie
+ WHERE title = 'Star Wars';
+
+EXPLAIN
+SELECT title
+  FROM movie
+ WHERE LOWER(title) LIKE 'star%';
+
+EXPLAIN
+SELECT title
+  FROM movie
+ WHERE LOWER(title) ~ '^star.*';
+
+-- for ordinary <, <=, >, or >= comparisons
+-- https://www.postgresql.org/docs/current/indexes-opclass.html#INDEXES-OPCLASS
+CREATE INDEX IF NOT EXISTS movie_title_ix ON movie (title);
+
+-- for like/ilike/regex comparisons
+CREATE INDEX IF NOT EXISTS movie_title_pattern_ix ON movie (LOWER(title) text_pattern_ops);
+
+EXPLAIN
+SELECT title
+  FROM movie
+ WHERE title = 'Star Wars';
+
+-- does not use the movie_title_pattern_ix index
+EXPLAIN
+SELECT title
+  FROM movie
+ WHERE title LIKE 'star%';
+
+-- uses the movie_title_pattern_ix index due to lower(title)
+EXPLAIN
+SELECT title
+  FROM movie
+ WHERE LOWER(title) LIKE 'star%';
+
+EXPLAIN
+SELECT title
+  FROM movie
+ WHERE LOWER(title) ~ '^star.*';
+
+-- https://www.postgresql.org/docs/current/fuzzystrmatch.html#FUZZYSTRMATCH-LEVENSHTEIN
+SELECT levenshtein('bat', 'fads');
+
+SELECT levenshtein('bat', 'fad') fad,
+       levenshtein('bat', 'fat') fat,
+       levenshtein('bat', 'bat') bat;
+
+SELECT movie_id,
+       title
+  FROM movie
+ WHERE levenshtein(LOWER(title), LOWER('a hard day night')) <= 3;
+
+-- https://www.postgresql.org/docs/current/pgtrgm.html
+SELECT show_trgm('Avatar');
+
+-- https://www.postgresql.org/docs/current/pgtrgm.html#PGTRGM-INDEX
+CREATE INDEX IF NOT EXISTS movie_title_trigram_ix ON movie USING gist (title gist_trgm_ops);
+
+-- https://www.postgresql.org/docs/current/pgtrgm.html#PGTRGM-OP-TABLE
+-- noinspection SqlType
+SELECT title
+  FROM movie
+ WHERE title % 'Avatre';
+
+-- noinspection SqlType
+EXPLAIN
+SELECT title
+  FROM movie
+ WHERE title % 'Avatre';
+
+-- https://www.postgresql.org/docs/current/textsearch-tables.html#TEXTSEARCH-TABLES-SEARCH
+-- https://www.postgresql.org/docs/current/functions-textsearch.html
+SELECT title
+  FROM movie
+ WHERE title @@ 'night & day';
+
+SELECT title
+  FROM movie
+ WHERE TO_TSVECTOR(title) @@ TO_TSQUERY('english', 'night & day');
+
+SELECT TO_TSVECTOR('A Hard Day''s Night'),
+       TO_TSQUERY('english', 'night & day');
+
+SELECT title
+  FROM movie
+ WHERE title @@ TO_TSQUERY('english', 'a');
+
+-- https://www.postgresql.org/docs/current/textsearch-dictionaries.html#TEXTSEARCH-DICTIONARIES
+SELECT TO_TSVECTOR('english', 'A Hard Day''s Night') english,
+       TO_TSVECTOR('simple', 'A Hard Day''s Night')  simple;
+
+-- https://www.postgresql.org/docs/current/textsearch-debugging.html#TEXTSEARCH-DICTIONARY-TESTING
+SELECT TS_LEXIZE('english_stem', 'Day''s');
+SELECT TS_LEXIZE('german_stem', 'Älter');
+
+SELECT TO_TSVECTOR('german', 'Was machst du gerade?');
+
+EXPLAIN
+SELECT *
+  FROM movie
+ WHERE title @@ 'night & day';
+
+-- https://www.postgresql.org/docs/current/gin.html
+CREATE INDEX IF NOT EXISTS movie_title_search_en_ix ON movie USING gin (TO_TSVECTOR('english', title));
+
+EXPLAIN
+SELECT *
+  FROM movie
+ WHERE TO_TSVECTOR('english', title) @@ 'night & day';
+
+-- movie_title_ix does not help
+SELECT *
+  FROM actor
+ WHERE name = 'Broos Wils';
+
+-- movie_title_pattern_ix does not help
+SELECT *
+  FROM actor
+ WHERE LOWER(name) ~ 'Broos Wils';
+
+-- movie_title_trigram_ix does not help
+-- noinspection SqlType
+SELECT *
+  FROM actor
+ WHERE name % 'Broos Wils';
+
+-- https://www.postgresql.org/docs/current/sql-select.html#SQL-FROM
+-- https://www.postgresql.org/docs/current/fuzzystrmatch.html#FUZZYSTRMATCH-METAPHONE
+SELECT title
+  FROM movie
+  NATURAL JOIN movie_actor
+  NATURAL JOIN actor
+ WHERE metaphone(name, 6) = metaphone('Broos Wils', 6)
+ LIMIT 5;
+
+SELECT name,
+       dmetaphone(name),
+       dmetaphone_alt(name),
+       metaphone(name, 8),
+       soundex(name)
+  FROM actor
+ LIMIT 5;
+
+-- noinspection SqlType
+SELECT name
+  FROM actor
+ WHERE metaphone(name, 8) % metaphone('Robin Williams', 8)
+ ORDER BY levenshtein(LOWER('Robin Williams'), LOWER(name));
+
+-- https://www.postgresql.org/docs/current/pgtrgm.html#PGTRGM-FUNCS-OPS
+SELECT name
+  FROM actor
+ ORDER BY similarity(
+              metaphone(name, 8),
+              metaphone('Robin Williams', 8)
+          ) DESC
+ LIMIT 5;
+
+-- noinspection SqlType
+SELECT name
+  FROM actor
+ WHERE dmetaphone(name) % dmetaphone('Ron')
+ LIMIT 5;
+
+-- https://www.postgresql.org/docs/current/cube.html#CUBE-FUNCTIONS-TABLE
+SELECT name,
+       cube_ur_coord('(0,7,0,0,0,0,0,0,0,7,0,0,0,0,10,0,0,0)', position) AS score
+  FROM genre
+ WHERE cube_ur_coord('(0,7,0,0,0,0,0,0,0,7,0,0,0,0,10,0,0,0)', position) > 0;
+
+SELECT title,
+       cube_distance(genre, '(0,7,0,0,0,0,0,0,0,7,0,0,0,0,10,0,0,0)') dist
+  FROM movie
+ ORDER BY dist
+ LIMIT 5;
+
+SELECT cube_enlarge('(1,1)', 1, 2);
+
+-- https://www.postgresql.org/docs/current/cube.html#CUBE-USAGE
+SELECT title,
+       cube_distance(genre, '(0,7,0,0,0,0,0,0,0,7,0,0,0,0,10,0,0,0)') dist
+  FROM movie
+-- 5 is the radius, not the number of rows returned
+-- 18 is the number entries in the genre table
+ WHERE cube_enlarge('(0,7,0,0,0,0,0,0,0,7,0,0,0,0,10,0,0,0)'::cube, 5, 18) @> genre
+ ORDER BY dist
+ LIMIT 5;
+
+SELECT m.title
+  FROM movie m,
+       (SELECT genre, title FROM movie WHERE title = 'Mad Max') s
+ WHERE cube_enlarge(s.genre, 5, 18) @> m.genre
+   AND m.title <> s.title
+ ORDER BY cube_distance(m.genre, s.genre)
+ LIMIT 5;
+
+-- https://www.postgresql.org/docs/current/plpgsql-declarations.html#PLPGSQL-DECLARATION-PARAMETERS
+-- https://www.postgresql.org/docs/current/plpgsql-control-structures.html#PLPGSQL-STATEMENTS-RETURNING-RETURN-NEXT
+CREATE OR REPLACE FUNCTION suggest_movies_by_actor(actor_name text, movie_count integer) RETURNS setof integer AS
+$$
+BEGIN
+  RETURN QUERY
+    SELECT movie_id
+      FROM movie
+      NATURAL JOIN movie_actor
+      NATURAL JOIN actor
+     WHERE metaphone(name, 6) = metaphone(actor_name, 6)
+     LIMIT movie_count;
+END;
+$$
+  LANGUAGE plpgsql;
+
+SELECT m.title
+  FROM movie m
+  INNER JOIN (SELECT *
+                FROM suggest_movies_by_actor('Broos Wils', 5)) s ON m.movie_id = s.suggest_movies_by_actor;
+
+SELECT m.title
+  FROM movie m
+  INNER JOIN (SELECT *
+                FROM suggest_movies_by_actor('Sebastian Davids', 5)) s ON m.movie_id = s.suggest_movies_by_actor;
+
+CREATE OR REPLACE FUNCTION suggest_similar_movies_by_title(movie_title text, movie_count integer) RETURNS setof integer AS
+$$
+BEGIN
+  RETURN QUERY
+    SELECT m.movie_id
+      FROM movie m,
+           (SELECT genre, title FROM movie WHERE title = movie_title) s
+     WHERE cube_enlarge(s.genre, 5, 18) @> m.genre
+       AND m.title <> s.title
+     ORDER BY cube_distance(m.genre, s.genre)
+     LIMIT movie_count;
+END;
+$$
+  LANGUAGE plpgsql;
+
+SELECT m.title
+  FROM movie m
+  INNER JOIN (SELECT *
+                FROM suggest_similar_movies_by_title('Mad Max', 5)) s ON m.movie_id = s.suggest_similar_movies_by_title;
+
+SELECT m.title
+  FROM movie m
+  INNER JOIN (SELECT *
+                FROM suggest_similar_movies_by_title('Maad Max', 5)) s ON m.movie_id = s.suggest_similar_movies_by_title;
+
+CREATE OR REPLACE FUNCTION suggest_similar_movies_by_title(movie_title text, movie_count integer) RETURNS setof integer AS
+$$
+BEGIN
+  RETURN QUERY
+    SELECT m.movie_id
+      FROM movie m,
+           (SELECT genre, title FROM movie WHERE metaphone(title, 6) = metaphone(movie_title, 6)) s
+     WHERE cube_enlarge(s.genre, 5, 18) @> m.genre
+       AND m.title <> s.title
+     ORDER BY cube_distance(m.genre, s.genre)
+     LIMIT movie_count;
+END;
+$$
+  LANGUAGE plpgsql;
+
+SELECT m.title
+  FROM movie m
+  INNER JOIN (SELECT *
+                FROM suggest_similar_movies_by_title('Maad Max', 5)) s ON m.movie_id = s.suggest_similar_movies_by_title;

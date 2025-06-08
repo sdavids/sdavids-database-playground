@@ -1,0 +1,19 @@
+-- Seven Databases in Seven Weeks, 1st ed., chapter 2, Day 3 - Create Extensions
+
+CREATE SCHEMA extension;
+
+GRANT USAGE ON SCHEMA extension TO PUBLIC;
+
+GRANT EXECUTE ON ALL ROUTINES IN SCHEMA extension TO PUBLIC;
+
+ALTER DEFAULT PRIVILEGES IN SCHEMA extension
+  GRANT EXECUTE ON ROUTINES TO PUBLIC;
+
+ALTER DEFAULT PRIVILEGES IN SCHEMA extension
+  GRANT USAGE ON TYPES TO PUBLIC;
+
+CREATE EXTENSION cube SCHEMA extension;
+CREATE EXTENSION dict_xsyn SCHEMA extension;
+CREATE EXTENSION fuzzystrmatch SCHEMA extension;
+CREATE EXTENSION pg_trgm SCHEMA extension;
+CREATE EXTENSION tablefunc SCHEMA extension;

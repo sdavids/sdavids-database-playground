@@ -1,0 +1,18 @@
+-- Seven Databases in Seven Weeks, 1st ed., chapter 2, Day 3 - Cleanup
+
+SET search_path TO movie;
+
+DROP INDEX IF EXISTS movie_title_search_en_ix;
+DROP INDEX IF EXISTS movie_title_trigram_ix;
+DROP INDEX IF EXISTS movie_title_pattern_ix;
+DROP INDEX IF EXISTS movie_title_ix;
+DROP INDEX IF EXISTS movie_genre_ix;
+DROP INDEX IF EXISTS movie_actor_actor_id_ix;
+DROP INDEX IF EXISTS movie_actor_movie_id_ix;
+
+DROP TABLE IF EXISTS movie_actor CASCADE;
+DROP TABLE IF EXISTS movie CASCADE;
+DROP TABLE IF EXISTS actor CASCADE;
+DROP TABLE IF EXISTS genre CASCADE;
+
+DROP SCHEMA IF EXISTS movie;

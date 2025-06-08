@@ -1,0 +1,45 @@
+-- Seven Databases in Seven Weeks, 1st ed., chapter 2, Day 3 - Initialization
+
+SET search_path TO extension;
+
+CREATE SCHEMA movie;
+
+CREATE TABLE movie.genre
+(
+  position smallint NOT NULL,
+  name     text     NOT NULL
+    CONSTRAINT genre_name_uq UNIQUE
+    CONSTRAINT genre_name_ck CHECK (name <> '')
+);
+
+CREATE TABLE movie.actor
+(
+  actor_id integer GENERATED ALWAYS AS IDENTITY
+    CONSTRAINT actor_pk PRIMARY KEY,
+  name     text NOT NULL
+    CONSTRAINT actor_name_ck CHECK (name <> '')
+);
+
+CREATE TABLE movie.movie
+(
+  movie_id integer GENERATED ALWAYS AS IDENTITY
+    CONSTRAINT movie_pk PRIMARY KEY,
+  title    text NOT NULL
+    CONSTRAINT movie_title_ck CHECK (title <> ''),
+  genre    cube NOT NULL
+);
+
+CREATE TABLE movie.movie_actor
+(
+  movie_id integer NOT NULL
+    CONSTRAINT movie_actor_movie_fk REFERENCES movie.movie,
+  actor_id integer NOT NULL
+    CONSTRAINT movie_actor_actor_fk REFERENCES movie.actor,
+  CONSTRAINT movie_id_actor_id_uq UNIQUE (movie_id, actor_id)
+);
+
+CREATE INDEX movie_actor_movie_id_ix ON movie.movie_actor (movie_id);
+CREATE INDEX movie_actor_actor_id_ix ON movie.movie_actor (actor_id);
+
+-- https://www.postgresql.org/docs/current/gist.html
+CREATE INDEX movie_genre_ix ON movie.movie USING gist (genre);

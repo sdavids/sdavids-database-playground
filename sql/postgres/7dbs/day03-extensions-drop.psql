@@ -1,0 +1,9 @@
+-- Seven Databases in Seven Weeks, 1st ed., chapter 2, Day 3 - Drop Extensions
+
+DROP EXTENSION IF EXISTS tablefunc;
+DROP EXTENSION IF EXISTS pg_trgm;
+DROP EXTENSION IF EXISTS fuzzystrmatch;
+DROP EXTENSION IF EXISTS dict_xsyn;
+DROP EXTENSION IF EXISTS cube;
+
+DROP SCHEMA IF EXISTS extension;
