@@ -1,0 +1,6 @@
+-- Seven Databases in Seven Weeks, 1st ed., chapter 2, Day 2 - Drop Extensions
+
+-- https://www.postgresql.org/docs/current/sql-dropextension.html
+DROP EXTENSION IF EXISTS tablefunc;
+
+DROP SCHEMA IF EXISTS extension;

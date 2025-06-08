@@ -175,3 +175,68 @@ Check Constraint:: `_ck`
 Index:: `_ix`
 Trigger:: `_tr`
 ====
+
+== Day 2
+
+[,console]
+----
+$ ../docker/scripts/docker_psql.sh -d . -f day01-db-create.psql
+$ ../docker/scripts/docker_psql.sh -d . -n book -f day01-init.psql
+$ ../docker/scripts/docker_psql.sh -d . -n book -f day01.psql
+$ ../docker/scripts/docker_psql.sh -d . -n book -f day02-extensions-create.psql
+$ ../docker/scripts/docker_psql.sh -d . -n book -f day02.psql
+$ ../docker/scripts/docker_psql.sh -d . -n book -f day02-cleanup.psql
+$ ../docker/scripts/docker_psql.sh -d . -n book -f day02-extensions-drop.psql
+$ ../docker/scripts/docker_psql.sh -d . -n book -f day01-cleanup.psql
+$ ../docker/scripts/docker_psql.sh -d . -f day01-db-drop.psql
+----
+
+[NOTE]
+====
+* Ensure that you add the extensions to the `search_path`:
++
+[,sql]
+----
+SET search_path TO book,extension;
+----
+
+* The current date and time:
++
+`CURRENT_TIMESTAMP` and `NOW()` ⇒ start of current transaction
++
+`CLOCK_TIMESTAMP()` ⇒ changes during statement execution
++
+** https://www.postgresql.org/docs/current/functions-datetime.html#FUNCTIONS-DATETIME[Date/Time Functions and Operators]
+** https://www.postgresql.org/docs/current/functions-datetime.html#FUNCTIONS-DATETIME-DELAY[Delaying Execution]
+
+* Convert a timestamp to a date: `CAST(some_timestamp AS date)`:
++
+`2025-03-24 03:00:00.000000` ⇒ `2025-03-24`
+
+* Convert a date to a timestamp: `some_date + '03:00:00'::time`:
++
+`2025-03-24` ⇒ `2025-03-24 03:00:00.000000`
+
+* Display a localized timestamp:
+. Ensure your server has the desired locales:
+** https://hub.docker.com/_/postgres/#:~:text=Locale%20Customization[Locale Customization]
++
+. Set the desired locale: `SET lc_time TO 'de_DE.utf8';`
++
+** https://www.postgresql.org/docs/current/runtime-config-client.html#GUC-LC-TIME[lc_time]
+** https://www.postgresql.org/docs/current/locale.html[Locale Support]
++
+. Use a localized format: `TO_CHAR(date, 'TMDay, DD TMMonth YYYY')`
++
+`en_US.utf8` ⇒ `Friday, 14 February 2025`
++
+`de_DE.utf8` ⇒ `Freitag, 14 Februar 2025`
+
+** https://www.postgresql.org/docs/current/functions-formatting.html#FUNCTIONS-FORMATTING[Data Type Formatting Functions]
+** https://www.postgresql.org/docs/current/functions-formatting.html#FUNCTIONS-FORMATTING-DATETIMEMOD-TABLE[Template Pattern Modifiers for Date/Time Formatting]
+
+* Accessing old and new rows in `RULE` and `TRIGGER`:
++
+** https://www.postgresql.org/docs/current/plpgsql-trigger.html#PLPGSQL-DML-TRIGGER[Triggers on Data Changes]
+** https://www.postgresql.org/docs/current/rules-update.html#RULES-UPDATE[Rules on INSERT, UPDATE, and DELETE]
+====

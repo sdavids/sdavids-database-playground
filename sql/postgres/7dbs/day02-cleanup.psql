@@ -1,0 +1,17 @@
+-- Seven Databases in Seven Weeks, 1st ed., chapter 2, Day 2 - Cleanup
+
+SET search_path TO book;
+
+-- https://www.postgresql.org/docs/current/sql-droptrigger.html
+DROP TRIGGER IF EXISTS log_event_tr ON event;
+
+-- https://www.postgresql.org/docs/current/sql-dropfunction.html
+DROP FUNCTION IF EXISTS log_event;
+DROP FUNCTION IF EXISTS add_event;
+
+-- https://www.postgresql.org/docs/current/sql-dropview.html
+DROP VIEW IF EXISTS event_by_year_month;
+DROP VIEW IF EXISTS holiday;
+
+DROP TABLE IF EXISTS log CASCADE;
+DROP TABLE IF EXISTS account CASCADE;

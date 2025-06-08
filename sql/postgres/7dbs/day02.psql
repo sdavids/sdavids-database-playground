@@ -1,0 +1,486 @@
+-- Seven Databases in Seven Weeks, 1st ed., chapter 2, Day 2
+
+SET search_path TO book,extension;
+
+INSERT INTO city (name, postal_code, country_code)
+VALUES ('Hamburg', '22767', 'de');
+
+INSERT INTO venue (name, postal_code, country_code, type)
+VALUES ('My Place', '22767', 'de', 'private');
+
+INSERT INTO event (title, starts, ends)
+VALUES ('Valentine''s Day', '2025-02-14 00:00:00', '2025-02-14 23:59:59');
+
+INSERT INTO event (title, starts, ends, venue_id)
+VALUES ('Roxy Revival Party', '2025-04-05 21:00:00', '2025-04-06 03:00:00', 1);
+
+INSERT INTO event (title, starts, ends, venue_id)
+VALUES ('Julklapp', '2025-12-12 21:00:00', '2025-12-13 02:00:00', (SELECT venue_id FROM venue WHERE name = 'My Place'));
+
+-- https://www.postgresql.org/docs/current/tutorial-agg.html
+-- https://www.postgresql.org/docs/current/functions-aggregate.html#FUNCTIONS-AGGREGATE
+-- https://www.postgresql.org/docs/current/functions-matching.html#FUNCTIONS-LIKE
+SELECT COUNT(*)
+  FROM event
+ WHERE title LIKE '%Day%';
+
+SELECT MIN(starts),
+       MAX(ends)
+  FROM event e
+  JOIN venue v ON e.venue_id = v.venue_id
+ WHERE v.name = 'Roxy';
+
+SELECT COUNT(*)
+  FROM event
+ WHERE venue_id = 1;
+
+SELECT COUNT(*)
+  FROM event
+ WHERE venue_id = 2;
+
+SELECT COUNT(*)
+  FROM event
+ WHERE venue_id = 3;
+
+SELECT COUNT(*)
+  FROM event
+ WHERE venue_id IS NULL;
+
+-- does not show venues without an event
+-- https://www.postgresql.org/docs/current/queries-table-expressions.html#QUERIES-GROUP
+-- https://www.postgresql.org/docs/current/sql-select.html#SQL-GROUPBY
+SELECT venue_id,
+       COUNT(*)
+  FROM event
+ GROUP BY venue_id;
+
+-- does not show events without a venue
+SELECT v.venue_id,
+       COUNT(e.event_id)
+  FROM venue v
+  LEFT JOIN event e ON v.venue_id = e.venue_id
+ GROUP BY 1;
+
+-- shows counts for events with and without venues
+SELECT v.venue_id,
+       COUNT(e.event_id)
+  FROM venue v
+  FULL JOIN event e ON v.venue_id = e.venue_id
+ GROUP BY 1;
+
+-- https://www.postgresql.org/docs/current/sql-select.html#SQL-HAVING
+SELECT venue_id,
+       COUNT(*)
+  FROM event
+ GROUP BY venue_id
+HAVING COUNT(*) >= 2
+   AND venue_id IS NOT NULL;
+
+SELECT venue_id
+  FROM event
+ GROUP BY venue_id;
+
+-- https://www.postgresql.org/docs/current/sql-select.html#SQL-DISTINCT
+SELECT DISTINCT venue_id
+  FROM event;
+
+-- SELECT title, venue_id, COUNT(*)
+-- FROM event
+-- GROUP BY venue_id;
+
+-- https://www.postgresql.org/docs/current/tutorial-window.html
+-- https://www.postgresql.org/docs/current/sql-expressions.html#SYNTAX-WINDOW-FUNCTIONS
+SELECT title,
+       venue_id,
+       COUNT(*) OVER (PARTITION BY venue_id)
+  FROM event;
+
+-- https://www.postgresql.org/docs/current/sql-begin.html
+BEGIN;
+
+DELETE
+  FROM event;
+
+-- https://www.postgresql.org/docs/current/sql-rollback.html
+ROLLBACK;
+
+SELECT *
+  FROM event;
+
+CREATE TABLE account
+(
+  account_id integer GENERATED ALWAYS AS IDENTITY
+    CONSTRAINT account_pk PRIMARY KEY,
+  total      numeric NOT NULL
+);
+
+INSERT INTO account (total)
+VALUES (10000);
+
+INSERT INTO account (total)
+VALUES (10000);
+
+BEGIN;
+
+UPDATE account
+   SET total = total - 5000
+ WHERE account_id = 1;
+UPDATE account
+   SET total = total + 5000
+ WHERE account_id = 2;
+
+-- https://www.postgresql.org/docs/current/sql-commit.html
+COMMIT;
+
+BEGIN;
+
+-- https://www.postgresql.org/docs/current/functions-datetime.html#FUNCTIONS-DATETIME-CURRENT
+-- https://www.postgresql.org/docs/current/functions-datetime.html#FUNCTIONS-DATETIME-TABLE
+SELECT CURRENT_TIMESTAMP,
+       NOW(),
+       CLOCK_TIMESTAMP();
+
+-- https://www.postgresql.org/docs/current/functions-datetime.html#FUNCTIONS-DATETIME-DELAY
+SELECT PG_SLEEP(1);
+
+SELECT CURRENT_TIMESTAMP,
+       NOW(),
+       CLOCK_TIMESTAMP();
+
+COMMIT;
+
+-- https://www.postgresql.org/docs/current/sql-createfunction.html
+-- https://www.postgresql.org/docs/current/plpgsql.html
+CREATE FUNCTION add_event(title text, starts timestamp, ends timestamp, venue text, postal_code varchar(9),
+                          country_code char(2))
+  RETURNS boolean AS
+$$
+DECLARE
+  did_insert   boolean := FALSE;
+  the_venue_id integer;
+BEGIN
+
+  -- https://www.postgresql.org/docs/current/sql-select.html#SQL-LIMIT
+  -- https://www.postgresql.org/docs/current/functions-matching.html#FUNCTIONS-LIKE
+  SELECT venue_id
+    INTO the_venue_id
+    FROM venue v
+   WHERE v.postal_code = add_event.postal_code
+     AND v.country_code = add_event.country_code
+     AND v.name ILIKE add_event.venue
+   LIMIT 1;
+
+  IF
+    the_venue_id IS NULL THEN
+       INSERT INTO venue (NAME, postal_code, country_code)
+       VALUES (add_event.venue, add_event.postal_code, add_event.country_code)
+    RETURNING venue_id INTO the_venue_id;
+
+    did_insert := TRUE;
+  END IF;
+
+  -- https://www.postgresql.org/docs/current/plpgsql-errors-and-messages.html
+  RAISE NOTICE 'Venue found %', the_venue_id;
+
+  INSERT INTO event (title, starts, ends, venue_id)
+  VALUES (add_event.title, add_event.starts, add_event.ends, the_venue_id);
+
+  RETURN did_insert;
+END;
+$$
+  LANGUAGE plpgsql;
+
+SELECT add_event('Ghostship', '2025-06-28 21:00:00', '2025-06-29 05:00:00', 'MS Stubnitz', '22767', 'de');
+
+CREATE TABLE log
+(
+  old_starts timestamp NOT NULL,
+  old_ends   timestamp NOT NULL,
+  logged_at  timestamp DEFAULT CURRENT_TIMESTAMP,
+  event_id   integer   NOT NULL,
+  old_title  text      NOT NULL
+);
+
+CREATE FUNCTION log_event()
+  RETURNS trigger AS
+$$
+DECLARE
+BEGIN
+  -- https://www.postgresql.org/docs/current/plpgsql-trigger.html#PLPGSQL-DML-TRIGGER
+  INSERT INTO log (event_id, old_title, old_starts, old_ends)
+  VALUES (OLD.event_id, OLD.title, OLD.starts, OLD.ends);
+
+  RAISE NOTICE 'Event changed %', OLD.event_id;
+
+  -- https://www.postgresql.org/docs/current/plpgsql-trigger.html#PLPGSQL-DML-TRIGGER
+  RETURN NEW;
+END;
+$$
+  LANGUAGE plpgsql;
+
+-- https://www.postgresql.org/docs/current/sql-createtrigger.html
+CREATE TRIGGER log_event_tr
+  AFTER UPDATE
+  ON event
+  FOR EACH ROW
+EXECUTE PROCEDURE log_event();
+
+UPDATE event
+   SET ends='2025-06-29 06:00:00'
+ WHERE title = 'Ghostship';
+
+SELECT *
+  FROM log;
+
+-- https://www.postgresql.org/docs/current/sql-createview.html
+-- https://www.postgresql.org/docs/current/sql-expressions.html#SQL-SYNTAX-TYPE-CASTS
+-- https://www.postgresql.org/docs/current/datatype-datetime.html
+CREATE VIEW holiday AS
+SELECT event_id             AS holiday_id,
+       title                AS name,
+       CAST(starts AS date) AS date
+  FROM event
+ WHERE title LIKE '%Day%'
+   AND venue_id IS NULL;
+
+SELECT *
+  FROM holiday;
+
+INSERT INTO event (title, starts, ends)
+VALUES ('Mother''s Day', '2025-05-11 00:00:00', '2025-05-11 23:59:59');
+
+-- https://www.postgresql.org/docs/current/runtime-config-client.html#GUC-LC-TIME
+SET
+  lc_time TO 'en_US.utf8';
+
+-- https://www.postgresql.org/docs/current/functions-formatting.html#FUNCTIONS-FORMATTING
+-- https://www.postgresql.org/docs/current/functions-formatting.html#FUNCTIONS-FORMATTING-DATETIMEMOD-TABLE
+SELECT name,
+       TO_CHAR(date, 'TMDay, DD TMMonth YYYY') AS date
+  FROM holiday;
+
+-- depends on the locale being installed on the system
+-- https://hub.docker.com/_/postgres/#:~:text=Locale%20Customization
+-- see sql/postgres/docker/Dockerfile
+SET
+  lc_time TO 'de_DE.utf8';
+
+SELECT name,
+       TO_CHAR(date, 'TMDay, DD TMMonth YYYY') AS date
+  FROM holiday;
+
+SET
+  lc_time TO '';
+
+-- https://www.postgresql.org/docs/current/arrays.html#ARRAYS-DECLARATION
+ALTER TABLE event
+  ADD COLUMN colors text array;
+
+CREATE OR REPLACE VIEW holiday AS
+SELECT event_id             AS holiday_id,
+       title                AS name,
+       CAST(starts AS date) AS date,
+       colors
+  FROM event
+ WHERE title LIKE '%Day%'
+   AND venue_id IS NULL;
+
+EXPLAIN VERBOSE
+SELECT *
+  FROM holiday;
+
+-- https://www.postgresql.org/docs/current/arrays.html#ARRAYS-DECLARATION
+UPDATE holiday
+   SET colors = '{"red", "white"}'
+ WHERE name = 'Valentine''s Day';
+
+-- https://www.postgresql.org/docs/current/sql-createrule.html
+-- https://www.postgresql.org/docs/current/rules-update.html
+-- https://www.postgresql.org/docs/current/functions-datetime.html#FUNCTIONS-DATETIME
+CREATE RULE insert_holiday AS ON INSERT TO holiday DO INSTEAD
+  INSERT INTO event (title, starts, ends)
+  VALUES (NEW.name, NEW.date + '00:00:00'::time, NEW.date + '23:59:59'::time);
+
+INSERT INTO holiday (name, date)
+VALUES ('New Years Day', '2025-12-31');
+
+INSERT INTO holiday (name, date)
+VALUES ('New Years Day', '2026-12-31');
+
+INSERT INTO holiday (name, date)
+VALUES ('New Years Day', '2027-12-31');
+
+-- https://www.postgresql.org/docs/current/functions-datetime.html#FUNCTIONS-DATETIME-EXTRACT
+SELECT EXTRACT(YEAR FROM starts)  AS year,
+       EXTRACT(MONTH FROM starts) AS month,
+       COUNT(*)
+  FROM event
+ GROUP BY year, month
+ ORDER BY year, month;
+
+-- https://www.postgresql.org/docs/current/sql-createtable.html#SQL-CREATETABLE-TEMPORARY
+CREATE TEMPORARY TABLE month_count
+(
+  month smallint
+);
+
+INSERT INTO month_count
+VALUES (1),
+       (2),
+       (3),
+       (4),
+       (5),
+       (6),
+       (7),
+       (8),
+       (9),
+       (10),
+       (11),
+       (12);
+
+-- https://www.postgresql.org/docs/current/functions-conditional.html#FUNCTIONS-COALESCE-NVL-IFNULL
+-- https://www.postgresql.org/docs/current/tablefunc.html#TABLEFUNC-FUNCTIONS-CROSSTAB-TEXT
+SELECT year,
+       COALESCE(jan, 0) AS jan,
+       COALESCE(feb, 0) AS feb,
+       COALESCE(mar, 0) AS mar,
+       COALESCE(apr, 0) AS apr,
+       COALESCE(may, 0) AS may,
+       COALESCE(jun, 0) AS jun,
+       COALESCE(jul, 0) AS jul,
+       COALESCE(aug, 0) AS aug,
+       COALESCE(sep, 0) AS sep,
+       COALESCE(oct, 0) AS oct,
+       COALESCE(nov, 0) AS nov,
+       COALESCE(dez, 0) AS dez
+  FROM crosstab(
+    'SELECT EXTRACT(YEAR FROM starts) AS year, EXTRACT(MONTH FROM starts) AS month, COUNT(*) FROM event GROUP BY year, month ORDER BY year, month',
+    'SELECT * from month_count'
+       ) AS (year numeric,
+             jan bigint,
+             feb bigint,
+             mar bigint,
+             apr bigint,
+             may bigint,
+             jun bigint,
+             jul bigint,
+             aug bigint,
+             sep bigint,
+             oct bigint,
+             nov bigint,
+             dez bigint)
+ ORDER BY year;
+
+CREATE RULE delete_venue AS ON DELETE TO venue DO INSTEAD
+  UPDATE venue
+     SET active = FALSE
+   WHERE venue_id = OLD.venue_id;
+
+SELECT name,
+       active
+  FROM venue;
+
+DELETE
+  FROM venue
+ WHERE name = 'Rock Cafe';
+
+SELECT name,
+       active
+  FROM venue;
+
+-- https://www.postgresql.org/docs/current/functions-srf.html#FUNCTIONS-SRF
+SELECT year,
+       COALESCE(jan, 0) AS jan,
+       COALESCE(feb, 0) AS feb,
+       COALESCE(mar, 0) AS mar,
+       COALESCE(apr, 0) AS apr,
+       COALESCE(may, 0) AS may,
+       COALESCE(jun, 0) AS jun,
+       COALESCE(jul, 0) AS jul,
+       COALESCE(aug, 0) AS aug,
+       COALESCE(sep, 0) AS sep,
+       COALESCE(oct, 0) AS oct,
+       COALESCE(nov, 0) AS nov,
+       COALESCE(dez, 0) AS dez
+  FROM crosstab(
+    'SELECT EXTRACT(YEAR FROM starts) AS year, EXTRACT(MONTH FROM starts) AS month, COUNT(*) FROM event GROUP BY year, month ORDER BY year, month',
+    'SELECT * FROM generate_series(1, 12)'
+       ) AS (year numeric,
+             jan bigint,
+             feb bigint,
+             mar bigint,
+             apr bigint,
+             may bigint,
+             jun bigint,
+             jul bigint,
+             aug bigint,
+             sep bigint,
+             oct bigint,
+             nov bigint,
+             dez bigint)
+ ORDER BY year;
+
+CREATE VIEW event_by_year_month AS
+SELECT year,
+       COALESCE(jan, 0) AS jan,
+       COALESCE(feb, 0) AS feb,
+       COALESCE(mar, 0) AS mar,
+       COALESCE(apr, 0) AS apr,
+       COALESCE(may, 0) AS may,
+       COALESCE(jun, 0) AS jun,
+       COALESCE(jul, 0) AS jul,
+       COALESCE(aug, 0) AS aug,
+       COALESCE(sep, 0) AS sep,
+       COALESCE(oct, 0) AS oct,
+       COALESCE(nov, 0) AS nov,
+       COALESCE(dez, 0) AS dez
+  FROM crosstab(
+    'SELECT EXTRACT(YEAR FROM starts) AS year, EXTRACT(MONTH FROM starts) AS month, COUNT(*) FROM event GROUP BY year, month ORDER BY year, month',
+    'SELECT * FROM generate_series(1, 12)'
+       ) AS (year numeric,
+             jan bigint,
+             feb bigint,
+             mar bigint,
+             apr bigint,
+             may bigint,
+             jun bigint,
+             jul bigint,
+             aug bigint,
+             sep bigint,
+             oct bigint,
+             nov bigint,
+             dez bigint)
+ ORDER BY year;
+
+SELECT *
+  FROM event_by_year_month;
+
+-- https://www.postgresql.org/docs/current/functions-datetime.html#FUNCTIONS-DATETIME-EXTRACT
+-- https://www.postgresql.org/docs/current/functions-string.html#FUNCTIONS-STRING
+SELECT CONCAT(EXTRACT(ISOYEAR FROM starts), ' ', LPAD(EXTRACT(WEEK FROM starts)::text, 2, '0')) AS year_week,
+       EXTRACT(DOW FROM starts)                                                                 AS day,
+       COUNT(*)
+  FROM event
+ GROUP BY year_week, day
+ ORDER BY year_week, day;
+
+SELECT year_week,
+       COALESCE(sun, 0) AS sun,
+       COALESCE(mon, 0) AS mon,
+       COALESCE(tue, 0) AS tue,
+       COALESCE(wed, 0) AS wed,
+       COALESCE(thu, 0) AS thu,
+       COALESCE(fri, 0) AS fri,
+       COALESCE(sat, 0) AS sat
+  FROM crosstab(
+    'SELECT CONCAT(EXTRACT(ISOYEAR FROM starts), '' '', LPAD(EXTRACT(WEEK FROM starts)::text, 2, ''0'')) AS year_week, EXTRACT(DOW FROM starts) AS day, COUNT(*) FROM event GROUP BY year_week, day ORDER BY year_week, day',
+    'SELECT * FROM generate_series(0, 6)'
+       ) AS (year_week text,
+             sun bigint,
+             mon bigint,
+             tue bigint,
+             wed bigint,
+             thu bigint,
+             fri bigint,
+             sat bigint)
+ ORDER BY year_week;

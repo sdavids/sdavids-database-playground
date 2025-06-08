@@ -1,0 +1,19 @@
+-- Seven Databases in Seven Weeks, 1st ed., chapter 2, Day 2 - Create Extensions
+
+CREATE SCHEMA extension;
+
+-- https://www.postgresql.org/docs/current/sql-grant.html
+GRANT USAGE ON SCHEMA extension TO PUBLIC;
+
+GRANT EXECUTE ON ALL ROUTINES IN SCHEMA extension TO PUBLIC;
+
+-- https://www.postgresql.org/docs/current/sql-alterdefaultprivileges.html
+ALTER DEFAULT PRIVILEGES IN SCHEMA extension
+  GRANT EXECUTE ON ROUTINES TO PUBLIC;
+
+-- https://www.postgresql.org/docs/current/ddl-priv.html
+ALTER DEFAULT PRIVILEGES IN SCHEMA extension
+  GRANT USAGE ON TYPES TO PUBLIC;
+
+-- https://www.postgresql.org/docs/current/sql-createextension.html
+CREATE EXTENSION IF NOT EXISTS tablefunc SCHEMA extension;
