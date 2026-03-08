@@ -13,4 +13,4 @@ readonly services
 
 # https://docs.docker.com/reference/cli/docker/compose/logs/
 # shellcheck disable=SC2086
-docker-compose logs --follow --tail --timestamps ${services}
+docker compose logs --follow --tail --timestamps ${services}
