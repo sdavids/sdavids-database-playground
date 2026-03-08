@@ -41,9 +41,16 @@ $ tree --noreport .docker/secrets
 +
 [WARNING]
 ====
-Be careful not to add newlines to the files.
+Exercise caution to avoid adding newlines to the credential files.
 
-This can easily happen if the editor you are using automatically inserts a newline at the end of the file.
+This can occur inadvertently if the editor you are using automatically inserts a newline at the end of the file.
+
+To eliminate the newline character at the end of a file, one can utilize the following command:
+
+[,console]
+----
+$ perl -pi -e 'chomp if eof' <file>
+----
 ====
 
 . Build the image:
