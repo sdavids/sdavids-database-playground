@@ -90,7 +90,7 @@ $ scripts/docker_compose_sh.sh postgres
 
 . Connect via https://www.postgresql.org/docs/current/app-psql.html#id-1.9.4.21.8[psql].
 +
-As superuser:
+As superuser (<<passwords,password>>):
 +
 [,console]
 ----
@@ -170,13 +170,32 @@ sd_example_ow:: the owner of the `example` schema
 sd_example_rw:: a read/write user for the `example` schema
 sd_example_ro:: a read-only user for the `example` schema
 
-Their random passwords will be created by the link:scripts/credentials_add.sh[credentials_add] script and stored in the following files in the `.docker/secrets` directory:
+[#passwords]
+The passwords will be randomly created by the link:scripts/credentials_add.sh[credentials_add] script and stored in the following files in the `.docker/secrets` directory:
 
 postgres-superuser-pw::  for the superuser
 sd-admin-pw:: for `sd_admin`
 sd-example-ow-pw:: for `sd_example_ow`
 sd-example-rw-pw:: for `sd_example_rw`
 sd-example-ro-pw:: for `sd_example_ro`
+
+[TIP]
+====
+Use the following commands to copy a password to your clipboard, e.g. the superuser:
+
+.macOS
+[,console]
+----
+$ cat .docker/secrets/postgres-superuser-pw | pbcopy
+----
+
+.Linux
+[,console]
+----
+$ cat .docker/secrets/postgres-superuser-pw | wl-copy
+$ cat .docker/secrets/postgres-superuser-pw | xclip -selection clipboard
+----
+====
 
 === Docker Compose
 
