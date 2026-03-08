@@ -74,6 +74,13 @@ $ scripts/docker_compose_init.sh
 $ scripts/docker_compose_up.sh -d
 ----
 
+. Get information on the container's health:
++
+[,console]
+----
+$ scripts/docker_health.sh
+----
+
 . Get information on the container's logs:
 +
 [,console]
@@ -137,6 +144,15 @@ $ scripts/docker_psql.sh -u sd_example_ro
 ----
 +
 Alternatively, use a database client of your choice and connect to `localhost:5432`
+
+. Dump the contents of the database:
++
+[,console]
+----
+$ scripts/docker_pg_dump.sh
+----
++
+⇒ `.docker/dumps/`
 
 . Remove the container and its volumes:
 +
