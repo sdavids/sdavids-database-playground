@@ -10,11 +10,11 @@ while getopts ':d:f:n:u:' opt; do
     d)
       base_dir="${OPTARG}"
       ;;
-    n)
-      db_name="${OPTARG}"
-      ;;
     f)
       file="${OPTARG}"
+      ;;
+    n)
+      db_name="${OPTARG}"
       ;;
     u)
       postgres_user="${OPTARG}"
