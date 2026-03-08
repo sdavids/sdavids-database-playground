@@ -7,7 +7,7 @@
 # https://docs.docker.com/engine/reference/builder/
 
 # https://hub.docker.com/_/postgres
-FROM postgres:17.5-bookworm
+FROM postgres:18.3-trixie
 
 RUN localedef -i de_DE -c -f UTF-8 -A /usr/share/locale/locale.alias de_DE.UTF-8
 

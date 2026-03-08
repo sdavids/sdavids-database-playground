@@ -12,7 +12,7 @@ x-postgres: &postgres
   build:
     context: ./postgres
   volumes:
-    - postgres_data:/var/lib/postgresql/data
+    - postgres-lib:/var/lib/postgresql
   networks:
     - db
   security_opt:
@@ -31,7 +31,7 @@ services:
     profiles: [default]
     container_name: sdavids-database-playground-postgres
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - postgres-lib:/var/lib/postgresql
     secrets:
       - postgres-superuser
       - postgres-superuser-pw
@@ -44,7 +44,7 @@ services:
     profiles: [init]
     container_name: sdavids-database-playground-postgres-init
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - postgres-lib:/var/lib/postgresql
       - ${LOCAL_WORKSPACE_FOLDER:-.}/initdb:/docker-entrypoint-initdb.d:ro
     secrets:
       - postgres-superuser
@@ -56,7 +56,7 @@ services:
     restart: no # yamllint disable-line rule:truthy
 
 volumes:
-  postgres_data: {}
+  postgres-lib: {}
 
 networks:
   db: {}
