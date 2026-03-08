@@ -93,7 +93,7 @@ readonly image_name="${namespace}/${repository}-postgres"
 
 readonly network_name='sdavids_database_playground_postgres'
 
-history_dir="$(realpath "${base_dir}/.docker/psql-history")"
+history_dir="$(realpath "${base_dir}")/.docker/psql-history"
 
 mkdir -p "${history_dir}"
 

@@ -84,7 +84,7 @@ readonly image_name="${namespace}/${repository}-postgres"
 
 readonly network_name='sdavids_database_playground_postgres'
 
-dumps_dir="$(realpath "${base_dir}/.docker/dumps")"
+dumps_dir="$(realpath "${base_dir}")/.docker/dumps"
 
 mkdir -p "${dumps_dir}"
 
