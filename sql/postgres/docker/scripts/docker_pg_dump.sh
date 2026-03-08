@@ -84,13 +84,13 @@ readonly image_name="${namespace}/${repository}-postgres"
 
 readonly network_name='sdavids_database_playground_postgres'
 
-dumps_dir="$(realpath "${base_dir}")/.docker/dumps"
+dumps_dir="$(realpath "${base_dir}")/.docker/pg_dumps"
 
 mkdir -p "${dumps_dir}"
 
 # https://github.com/devcontainers/features/tree/main/src/docker-outside-of-docker#1-use-the-localworkspacefolder-as-environment-variable-in-your-code
 if [ -n "${LOCAL_WORKSPACE_FOLDER+x}" ]; then
-  dumps_dir="${LOCAL_WORKSPACE_FOLDER}/.docker/dumps"
+  dumps_dir="${LOCAL_WORKSPACE_FOLDER}/.docker/pg_dumps"
 fi
 readonly dumps_dir
 
