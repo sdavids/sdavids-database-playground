@@ -11,12 +11,27 @@ Sebastian Davids <sdavids@gmx.de>
 :hide-uri-scheme:
 :source-highlighter: rouge
 :rouge-style: github
+// Refs:
+:docker-install-url: https://docs.docker.com/install/
+:hadolint-install-url: https://github.com/hadolint/hadolint?tab=readme-ov-file#install
 
 ifdef::env-github[]
 :important-caption: :heavy_exclamation_mark:
 endif::[]
 
 Playground for databases and related frameworks and tools.
+
+== SQL
+
+=== PostgreSQL
+
+* link:sql/postgres/docker/README.adoc[Docker]
+* link:sql/postgres/docker-compose/README.adoc[Docker Compose]
+* link:sql/postgres/7dbs/README.adoc[Seven Databases in Seven Weeks: Chapter 2]
+
+== Development Environment Setup
+
+=== Installation
 
 [IMPORTANT]
 ====
@@ -28,10 +43,67 @@ $ git config set core.hooksPath .githooks
 ----
 ====
 
-== SQL
+==== Docker
 
-=== PostgreSQL
+Install {docker-install-url}[Docker].
 
-* link:sql/postgres/docker/README.adoc[Docker]
-* link:sql/postgres/docker-compose/README.adoc[Docker Compose]
-* link:sql/postgres/7dbs/README.adoc[Seven Databases in Seven Weeks: Chapter 2]
+==== shellcheck
+
+===== Linux
+
+[,console]
+----
+$ sudo apt-get install shellcheck
+----
+
+===== Mac
+
+[,console]
+----
+$ brew install shellcheck
+----
+
+==== shfmt
+
+===== Linux
+
+[,console]
+----
+$ sudo apt-get install shfmt
+----
+
+===== Mac
+
+[,console]
+----
+$ brew install shfmt
+----
+
+==== yamllint
+
+===== Linux
+
+[,console]
+----
+$ sudo apt-get install yamllint
+----
+
+===== Mac
+
+[,console]
+----
+$ brew install yamllint
+----
+
+==== hadolint
+
+===== Linux
+
+Install {hadolint-install-url}[hadolint].
+
+===== Mac
+
+[,console]
+----
+$ brew install hadolint
+----
