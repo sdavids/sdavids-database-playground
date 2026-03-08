@@ -20,7 +20,7 @@ while getopts ':d:f:n:u:' opt; do
       postgres_user="${OPTARG}"
       ;;
     ?)
-      echo "Usage: $0 [-d <directory>] [-f <format>] [-n <database>] [-u <postgres_user>]" >&2
+      echo "Usage: $0 [-d <directory>] [-f <format>] [-n <database name>] [-u <postgres user>]" >&2
       exit 1
       ;;
   esac
