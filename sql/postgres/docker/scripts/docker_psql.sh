@@ -118,7 +118,7 @@ if [ -n "${file}" ]; then
     --env PAGER=less \
     --env LESS='-S' \
     --mount "type=bind,source=${history_dir},target=/run/psql" \
-    --mount "type=bind,source=$(realpath "${file}"),target=/run/script" \
+    --mount "type=bind,source=$(realpath "${file}"),target=/run/script,ro" \
     --network "${network_name}" \
     "${image_name}:${tag}" \
     psql \
