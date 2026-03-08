@@ -8,6 +8,7 @@ set -eu
 readonly container_name='sdavids-database-playground-postgres'
 
 container_id="$(docker container ls --all --quiet --filter="name=^/${container_name}$")"
+readonly container_id
 
 if [ -n "${container_id}" ]; then
   # HEALTHCHECK defined?
