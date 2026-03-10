@@ -213,6 +213,45 @@ $ cat .docker/secrets/postgres-superuser-pw | xclip -selection clipboard
 ----
 ====
 
+[TIP]
+====
+Create a `.pgpass` file with the following content:
+
+[,text]
+----
+# https://www.postgresql.org/docs/current/libpq-pgpass.html
+host.docker.internal:5432:sd_example:SUPERUSER:PASSWORD
+host.docker.internal:5432:sd_example:sd_admin:PASSWORD
+host.docker.internal:5432:sd_example:sd_example_ow:PASSWORD
+host.docker.internal:5432:sd_example:sd_example_ro:PASSWORD
+host.docker.internal:5432:sd_example:sd_example_rw:PASSWORD
+----
+
+Change the file's permissions to `600`:
+
+[,console]
+----
+$ chmod 600 .pgpass
+----
+
+Replace `SUPERUSER` s with the value found in `.docker/secrets/postgres-superuser`.
+
+Replace the `PASSWORD` s with their values found in `.docker/secrets/*-pw`.
+
+Important: The file has to be named `.pgpass` and the permissions have to be `600`!
+
+Verify that passwordless login works:
+
+[,console]
+----
+$ scripts/docker_psql.sh -p .pgpass -u sd_admin
+psql (18.3 (Debian 18.3-1.pgdg13+1))
+Type "help" for help.
+
+sd_example=# \q
+----
+====
+
 === Docker
 
 The link:scripts/docker_start.sh[docker_start] script will mount the `.docker/secrets` directory into the container.

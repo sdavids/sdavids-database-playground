@@ -41,3 +41,6 @@ jffi*.dylib
 
 ### direnv files ###
 .envrc
+
+### PostgreSQL ###
+.pgpass

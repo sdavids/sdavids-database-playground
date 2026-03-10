@@ -5,7 +5,7 @@
 
 set -eu
 
-while getopts ':d:f:n:u:' opt; do
+while getopts ':d:f:n:p:u:' opt; do
   case "${opt}" in
     d)
       base_dir="${OPTARG}"
@@ -16,11 +16,15 @@ while getopts ':d:f:n:u:' opt; do
     n)
       db_name="${OPTARG}"
       ;;
+    p)
+      # https://www.postgresql.org/docs/current/libpq-pgpass.html
+      password_file="${OPTARG}"
+      ;;
     u)
       postgres_user="${OPTARG}"
       ;;
     ?)
-      echo "Usage: $0 [-d <directory>] [-f <script file>] [-n <database name>] [-u <postgres user>]" >&2
+      echo "Usage: $0 [-d <directory>] [-f <script file>] [-n <database name>] [-p <password file>] [-u <postgres user>]" >&2
       exit 1
       ;;
   esac
@@ -83,6 +87,16 @@ if [ -n "${file}" ]; then
 fi
 readonly file
 
+password_file="${password_file:-}"
+if [ -n "${password_file}" ]; then
+  if [ ! -f "${password_file}" ]; then
+    printf "password file '%s' does not exit\n" "${password_file}" >&2
+    exit 6
+  fi
+  password_file="$(realpath "${password_file}")"
+fi
+readonly password_file
+
 readonly tag='local'
 
 # https://docs.docker.com/reference/cli/docker/image/tag/#description
@@ -107,41 +121,85 @@ readonly history_dir
 # https://man7.org/linux/man-pages/man7/capabilities.7.html
 # https://docs.docker.com/desktop/features/networking/#i-want-to-connect-from-a-container-to-a-service-on-the-host
 if [ -n "${file}" ]; then
-  docker container run \
-    --interactive \
-    --tty \
-    --rm \
-    --read-only \
-    --security-opt='no-new-privileges=true' \
-    --cap-drop=all \
-    --env PSQL_HISTORY=/run/psql/psql_history \
-    --env PAGER=less \
-    --env LESS='-S' \
-    --mount "type=bind,source=${history_dir},target=/run/psql" \
-    --mount "type=bind,source=$(realpath "${file}"),target=/run/script,ro" \
-    --network "${network_name}" \
-    "${image_name}:${tag}" \
-    psql \
-    --host=host.docker.internal \
-    --username="${postgres_user}" \
-    --dbname="${db_name}" \
-    --file=/run/script
+  if [ -n "${password_file}" ]; then
+    docker container run \
+      --interactive \
+      --tty \
+      --rm \
+      --read-only \
+      --security-opt='no-new-privileges=true' \
+      --cap-drop=all \
+      --env PSQL_HISTORY=/run/psql/psql_history \
+      --env PAGER=less \
+      --env LESS='-S' \
+      --mount "type=bind,source=${password_file},target=/root/.pgpass,ro" \
+      --mount "type=bind,source=${history_dir},target=/run/psql" \
+      --mount "type=bind,source=$(realpath "${file}"),target=/run/script,ro" \
+      --network "${network_name}" \
+      "${image_name}:${tag}" \
+      psql \
+      --host=host.docker.internal \
+      --username="${postgres_user}" \
+      --dbname="${db_name}" \
+      --file=/run/script
+    else
+      docker container run \
+        --interactive \
+        --tty \
+        --rm \
+        --read-only \
+        --security-opt='no-new-privileges=true' \
+        --cap-drop=all \
+        --env PSQL_HISTORY=/run/psql/psql_history \
+        --env PAGER=less \
+        --env LESS='-S' \
+        --mount "type=bind,source=${history_dir},target=/run/psql" \
+        --mount "type=bind,source=$(realpath "${file}"),target=/run/script,ro" \
+        --network "${network_name}" \
+        "${image_name}:${tag}" \
+        psql \
+        --host=host.docker.internal \
+        --username="${postgres_user}" \
+        --dbname="${db_name}" \
+        --file=/run/script
+    fi
 else
-  docker container run \
-    --interactive \
-    --tty \
-    --rm \
-    --read-only \
-    --security-opt='no-new-privileges=true' \
-    --cap-drop=all \
-    --env PSQL_HISTORY=/run/psql_history \
-    --env PAGER=less \
-    --env LESS='-S' \
-    --mount "type=bind,source=${history_dir},target=/run/" \
-    --network "${network_name}" \
-    "${image_name}:${tag}" \
-    psql \
-    --host=host.docker.internal \
-    --username="${postgres_user}" \
-    --dbname="${db_name}"
+  if [ -n "${password_file}" ]; then
+    docker container run \
+      --interactive \
+      --tty \
+      --rm \
+      --read-only \
+      --security-opt='no-new-privileges=true' \
+      --cap-drop=all \
+      --env PSQL_HISTORY=/run/psql_history \
+      --env PAGER=less \
+      --env LESS='-S' \
+      --mount "type=bind,source=${password_file},target=/root/.pgpass,ro" \
+      --mount "type=bind,source=${history_dir},target=/run/" \
+      --network "${network_name}" \
+      "${image_name}:${tag}" \
+      psql \
+      --host=host.docker.internal \
+      --username="${postgres_user}" \
+      --dbname="${db_name}"
+    else
+      docker container run \
+        --interactive \
+        --tty \
+        --rm \
+        --read-only \
+        --security-opt='no-new-privileges=true' \
+        --cap-drop=all \
+        --env PSQL_HISTORY=/run/psql_history \
+        --env PAGER=less \
+        --env LESS='-S' \
+        --mount "type=bind,source=${history_dir},target=/run/" \
+        --network "${network_name}" \
+        "${image_name}:${tag}" \
+        psql \
+        --host=host.docker.internal \
+        --username="${postgres_user}" \
+        --dbname="${db_name}"
+    fi
 fi
