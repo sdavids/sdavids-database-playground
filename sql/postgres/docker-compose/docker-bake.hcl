@@ -34,7 +34,7 @@ target "postgres" {
   ]
   labels = {
     "de.sdavids.docker.group" = "sdavids-database-playground"
-    "org.opencontainers.image.revision" = "${GIT_COMMIT_ID}"
-    "org.opencontainers.image.created" = "${BUILD_TIME}"
+    "org.opencontainers.image.revision" = GIT_COMMIT_ID
+    "org.opencontainers.image.created" = BUILD_TIME
   }
 }
