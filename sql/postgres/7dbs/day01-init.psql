@@ -1,3 +1,6 @@
+-- SPDX-FileCopyrightText: © 2025 Sebastian Davids <sdavids@gmx.de>
+-- SPDX-License-Identifier: Apache-2.0
+
 -- Seven Databases in Seven Weeks, 1st ed., chapter 2, Day 1 - Initialization
 
 -- https://www.postgresql.org/docs/current/sql-createschema.html
