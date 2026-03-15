@@ -21,9 +21,9 @@ x-postgres: &postgres
     - ALL
   user: postgres
   environment:
-    POSTGRES_USER_FILE: /run/secrets/postgres-superuser
-    POSTGRES_PASSWORD_FILE: /run/secrets/postgres-superuser-pw
-    POSTGRES_DB: postgres
+    - POSTGRES_USER_FILE=/run/secrets/postgres-superuser
+    - POSTGRES_PASSWORD_FILE=/run/secrets/postgres-superuser-pw
+    - POSTGRES_DB=postgres
 
 services:
   postgres:
