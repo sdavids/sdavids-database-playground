@@ -18,6 +18,8 @@ CREATE USER sd_example_ro WITH LOGIN PASSWORD :'ro_pw';
 -- create the database
 CREATE DATABASE sd_example WITH OWNER sd_admin
   TEMPLATE template0
+  LOCALE_PROVIDER builtin
+  BUILTIN_LOCALE "C"
   ENCODING  utf8;
 
 -- set permissions for database sd_example
