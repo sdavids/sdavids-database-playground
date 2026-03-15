@@ -74,9 +74,9 @@ if [ ! -d "${init_db_dir}" ]; then
 fi
 
 passwd_file="${base_dir}/.docker/secrets/etc-passwd"
-postgres_lib_dir="${base_dir}/.docker/postgres-lib"
+postgres_data_dir="${base_dir}/.docker/postgres-data"
 
-mkdir -p "${postgres_lib_dir}"
+mkdir -p "${postgres_data_dir}"
 
 # non-root user needs an entry in /etc/passwd
 docker container run \
@@ -94,20 +94,20 @@ if [ -n "${LOCAL_WORKSPACE_FOLDER+x}" ]; then
   secrets_dir="${LOCAL_WORKSPACE_FOLDER}/.docker/secrets"
   init_db_dir="${LOCAL_WORKSPACE_FOLDER}/initdb"
   passwd_file="${LOCAL_WORKSPACE_FOLDER}/.docker/secrets/passwd"
-  postgres_lib_dir="${LOCAL_WORKSPACE_FOLDER}/.docker/postgres-lib"
+  postgres_data_dir="${LOCAL_WORKSPACE_FOLDER}/.docker/postgres-data"
 else
   secrets_dir="$(realpath "${secrets_dir}")"
   init_db_dir="$(realpath "${init_db_dir}")"
   passwd_file="$(realpath "${passwd_file}")"
-  postgres_lib_dir="$(realpath "${postgres_lib_dir}")"
+  postgres_data_dir="$(realpath "${postgres_data_dir}")"
 fi
 readonly secrets_dir
 readonly init_db_dir
 readonly passwd_file
-readonly postgres_lib_dir
+readonly postgres_data_dir
 
 if [ -n "$(docker ps --all --filter name="${container_name}" --filter status=exited --format '{{.Status}}')" ] \
-  && [ -d "${postgres_lib_dir}" ]; then
+  && [ -d "${postgres_data_dir}" ]; then
   docker container start "${container_name}" >/dev/null
 else
   docker network inspect "${network_name}" >/dev/null 2>&1 \
@@ -132,7 +132,7 @@ else
     --mount "type=bind,source=${secrets_dir},target=/run/secrets,readonly" \
     --mount "type=bind,source=${passwd_file},target=/etc/passwd,readonly" \
     --mount "type=bind,source=${init_db_dir},target=/docker-entrypoint-initdb.d,readonly" \
-    --mount "type=bind,source=${postgres_lib_dir},target=/var/lib/postgresql" \
+    --mount "type=bind,source=${postgres_data_dir},target=/var/lib/postgresql/18/docker" \
     --name "${container_name}" \
     --label "${label}" \
     "${image_name}:${tag}" >/dev/null

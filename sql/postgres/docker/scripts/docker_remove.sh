@@ -27,7 +27,7 @@ readonly container_name='sdavids-database-playground-postgres'
 
 readonly secrets_dir="${base_dir}/.docker/secrets"
 readonly passwd_file="${secrets_dir}/etc-passwd"
-readonly postgres_lib_dir="${base_dir}/.docker/postgres-lib"
+readonly postgres_data_dir="${base_dir}/.docker/postgres-data"
 readonly history_dir="${base_dir}/.docker/psql-history"
 
 if [ -n "$(docker container ls --all --quiet --filter="name=^/${container_name}$")" ]; then
@@ -52,7 +52,7 @@ if [ -d "${secrets_dir}" ] && [ -z "$(ls -A "${secrets_dir}")" ]; then
 fi
 
 if [ "${yes}" = 'false' ]; then
-  printf "Do you want to irreversibly delete the Postgres lib directory '%s' (Y/N)? " "${postgres_lib_dir}"
+  printf "Do you want to irreversibly delete the Postgres data directory '%s' (Y/N)? " "${postgres_data_dir}"
   read -n 1 -r should_delete
 
   case "${should_delete}" in
@@ -64,4 +64,4 @@ if [ "${yes}" = 'false' ]; then
   esac
 fi
 
-rm -rf "${postgres_lib_dir}"
+rm -rf "${postgres_data_dir}"
