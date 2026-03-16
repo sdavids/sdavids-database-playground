@@ -5,16 +5,21 @@
 
 set -eu
 
-while getopts ':d:f:n:u:' opt; do
+while getopts ':d:f:n:p:u:' opt; do
   case "${opt}" in
     d)
       base_dir="${OPTARG}"
       ;;
     f)
+      # https://www.postgresql.org/docs/current/app-pgdump.html#:~:text=%2DF%20format-,%2D%2Dformat%3Dformat,-Selects%20the%20format
       format="${OPTARG}"
       ;;
     n)
       db_name="${OPTARG}"
+      ;;
+    p)
+      # https://www.postgresql.org/docs/current/libpq-pgpass.html
+      password_file="${OPTARG}"
       ;;
     u)
       postgres_user="${OPTARG}"
@@ -44,11 +49,21 @@ readonly base_dir="${base_dir:-$PWD}"
 readonly db_name="${db_name:-sd_example}"
 readonly format="${format:-custom}"
 
+password_file="${password_file:-}"
+if [ -n "${password_file}" ]; then
+  if [ ! -f "${password_file}" ]; then
+    printf "password file '%s' does not exit\n" "${password_file}" >&2
+    exit 2
+  fi
+  password_file="$(realpath "${password_file}")"
+fi
+readonly password_file
+
 secrets_dir="${base_dir}/.docker/secrets"
 
 if [ ! -d "${secrets_dir}" ]; then
   printf "secrets directory '%s' does not exist\n" "${secrets_dir}" >&2
-  exit 1
+  exit 3
 fi
 
 # https://github.com/devcontainers/features/tree/main/src/docker-outside-of-docker#1-use-the-localworkspacefolder-as-environment-variable-in-your-code
@@ -62,14 +77,14 @@ if [ -z "${postgres_user+x}" ]; then
 
   if [ ! -f "${postgres_user_file}" ]; then
     printf "superuser file '%s' does not exist\n" "${postgres_user_file}" >&2
-    exit 2
+    exit 4
   fi
 
   postgres_user="$(cat "${postgres_user_file}")"
 
   if [ -z "${postgres_user}" ]; then
     printf "superuser file '%s' is empty\n" "${postgres_user_file}" >&2
-    exit 3
+    exit 5
   fi
 fi
 readonly postgres_user
@@ -100,19 +115,39 @@ readonly dump_file
 # https://www.postgresql.org/docs/current/app-pgdump.html
 # https://man7.org/linux/man-pages/man7/capabilities.7.html
 # https://docs.docker.com/desktop/features/networking/#i-want-to-connect-from-a-container-to-a-service-on-the-host
-docker container run \
-  --interactive \
-  --tty \
-  --rm \
-  --read-only \
-  --security-opt='no-new-privileges=true' \
-  --cap-drop=all \
-  --mount "type=bind,source=${dumps_dir},target=/run/dumps" \
-  --network "${network_name}" \
-  "${image_name}:${tag}" \
-  pg_dump \
-  --host=host.docker.internal \
-  --username="${postgres_user}" \
-  --dbname="${db_name}" \
-  --format="${format}" \
-  --file="${dump_file}"
+if [ -n "${password_file}" ]; then
+  docker container run \
+    --interactive \
+    --tty \
+    --rm \
+    --read-only \
+    --security-opt='no-new-privileges=true' \
+    --cap-drop=all \
+    --mount "type=bind,source=${password_file},target=/root/.pgpass,ro" \
+    --mount "type=bind,source=${dumps_dir},target=/run/dumps" \
+    --network "${network_name}" \
+    "${image_name}:${tag}" \
+    pg_dump \
+    --host=host.docker.internal \
+    --username="${postgres_user}" \
+    --dbname="${db_name}" \
+    --format="${format}" \
+    --file="${dump_file}"
+else
+  docker container run \
+    --interactive \
+    --tty \
+    --rm \
+    --read-only \
+    --security-opt='no-new-privileges=true' \
+    --cap-drop=all \
+    --mount "type=bind,source=${dumps_dir},target=/run/dumps" \
+    --network "${network_name}" \
+    "${image_name}:${tag}" \
+    pg_dump \
+    --host=host.docker.internal \
+    --username="${postgres_user}" \
+    --dbname="${db_name}" \
+    --format="${format}" \
+    --file="${dump_file}"
+fi
