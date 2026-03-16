@@ -142,27 +142,27 @@ if [ -n "${file}" ]; then
       --username="${postgres_user}" \
       --dbname="${db_name}" \
       --file=/run/script
-    else
-      docker container run \
-        --interactive \
-        --tty \
-        --rm \
-        --read-only \
-        --security-opt='no-new-privileges=true' \
-        --cap-drop=all \
-        --env PSQL_HISTORY=/run/psql/psql_history \
-        --env PAGER=less \
-        --env LESS='-S' \
-        --mount "type=bind,source=${history_dir},target=/run/psql" \
-        --mount "type=bind,source=$(realpath "${file}"),target=/run/script,ro" \
-        --network "${network_name}" \
-        "${image_name}:${tag}" \
-        psql \
-        --host=host.docker.internal \
-        --username="${postgres_user}" \
-        --dbname="${db_name}" \
-        --file=/run/script
-    fi
+  else
+    docker container run \
+      --interactive \
+      --tty \
+      --rm \
+      --read-only \
+      --security-opt='no-new-privileges=true' \
+      --cap-drop=all \
+      --env PSQL_HISTORY=/run/psql/psql_history \
+      --env PAGER=less \
+      --env LESS='-S' \
+      --mount "type=bind,source=${history_dir},target=/run/psql" \
+      --mount "type=bind,source=$(realpath "${file}"),target=/run/script,ro" \
+      --network "${network_name}" \
+      "${image_name}:${tag}" \
+      psql \
+      --host=host.docker.internal \
+      --username="${postgres_user}" \
+      --dbname="${db_name}" \
+      --file=/run/script
+  fi
 else
   if [ -n "${password_file}" ]; then
     docker container run \
@@ -183,23 +183,23 @@ else
       --host=host.docker.internal \
       --username="${postgres_user}" \
       --dbname="${db_name}"
-    else
-      docker container run \
-        --interactive \
-        --tty \
-        --rm \
-        --read-only \
-        --security-opt='no-new-privileges=true' \
-        --cap-drop=all \
-        --env PSQL_HISTORY=/run/psql_history \
-        --env PAGER=less \
-        --env LESS='-S' \
-        --mount "type=bind,source=${history_dir},target=/run/" \
-        --network "${network_name}" \
-        "${image_name}:${tag}" \
-        psql \
-        --host=host.docker.internal \
-        --username="${postgres_user}" \
-        --dbname="${db_name}"
-    fi
+  else
+    docker container run \
+      --interactive \
+      --tty \
+      --rm \
+      --read-only \
+      --security-opt='no-new-privileges=true' \
+      --cap-drop=all \
+      --env PSQL_HISTORY=/run/psql_history \
+      --env PAGER=less \
+      --env LESS='-S' \
+      --mount "type=bind,source=${history_dir},target=/run/" \
+      --network "${network_name}" \
+      "${image_name}:${tag}" \
+      psql \
+      --host=host.docker.internal \
+      --username="${postgres_user}" \
+      --dbname="${db_name}"
+  fi
 fi
