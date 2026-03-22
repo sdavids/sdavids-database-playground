@@ -31,10 +31,10 @@ readonly postgres_user
 
 psql \
   --set ON_ERROR_STOP=1 \
-  --set=ad_pw="$( cat /run/secrets/sd-admin-pw )" \
-  --set=ow_pw="$( cat /run/secrets/sd-example-ow-pw )" \
-  --set=rw_pw="$( cat /run/secrets/sd-example-rw-pw )" \
-  --set=ro_pw="$( cat /run/secrets/sd-example-ro-pw )" \
+  --set=ad_pw="$(cat /run/secrets/sd-admin-pw)" \
+  --set=ow_pw="$(cat /run/secrets/sd-example-ow-pw)" \
+  --set=rw_pw="$(cat /run/secrets/sd-example-rw-pw)" \
+  --set=ro_pw="$(cat /run/secrets/sd-example-ro-pw)" \
   --username "${postgres_user}" \
   --dbname "${db_name}" \
   --file /docker-entrypoint-initdb.d/init.psql
